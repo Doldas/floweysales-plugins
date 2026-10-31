@@ -1,0 +1,21 @@
+{
+  "protocol": 1,
+  "id": "ecb",
+  "name": "ECB exchange rates",
+  "version": "1.0.0",
+  "description": "Official euro foreign exchange reference rates from the European Central Bank, with cross rates between any two of about 30 currencies. Symbols are currency pairs such as EURUSD, EURSEK or USDSEK.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/ecb",
+  "license": "MIT",
+  "provider": {
+    "id": "ECB",
+    "label": "ECB reference rates",
+    "official_api": true,
+    "experimental": false,
+    "capabilities": ["quote", "history", "search"],
+    "quote_kind": "daily_reference_rate",
+    "min_poll_seconds": 600,
+    "cache_ttl_seconds": 3600,
+    "notes": "ECB euro reference rates are published once per TARGET working day around 16:00 CET for information only, not for transactions. Cross rates are derived from two euro rates of the same day."
+  }
+}

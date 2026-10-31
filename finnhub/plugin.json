@@ -2,7 +2,7 @@
   "protocol": 1,
   "id": "finnhub",
   "name": "Finnhub",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Quotes, candles, symbol search, SEC-reported quarterly statements and allowlisted company research (profile, peers, analyst views, earnings, dividends, news) from the official Finnhub API.",
   "publisher": "FloweySales",
   "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/finnhub",
@@ -17,7 +17,8 @@
       "history",
       "search",
       "financials",
-      "research"
+      "research",
+      "news"
     ],
     "quote_kind": "ohlc_bar_close",
     "min_poll_seconds": 20,

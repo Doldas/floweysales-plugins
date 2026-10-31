@@ -56,6 +56,7 @@ func newPlugin(f *finnhub) sdk.Plugin {
 		Research: func(ctx context.Context, p sdk.ResearchParams) (sdk.ResearchResult, error) {
 			return f.research(ctx, manifest, p)
 		},
+		News: f.news,
 	}
 }
 
@@ -314,4 +315,43 @@ func (f *finnhub) research(ctx context.Context, manifest sdk.Manifest, p sdk.Res
 		return sdk.ResearchResult{}, err
 	}
 	return research.Result("FINNHUB", op, p.Symbol, "https://finnhub.io/api/v1"+op.Path, data, ""), nil
+}
+
+// news reads company news for the last week from /company-news.
+func (f *finnhub) news(ctx context.Context, p sdk.NewsParams) ([]sdk.NewsItem, error) {
+	symbol := strings.ToUpper(strings.TrimSpace(p.Symbol))
+	if symbol == "" {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "symbol is required")
+	}
+	limit := p.Limit
+	if limit < 1 || limit > 20 {
+		limit = 5
+	}
+	now := time.Now().UTC()
+	q := url.Values{"symbol": {symbol}, "from": {now.AddDate(0, 0, -7).Format("2006-01-02")}, "to": {now.Format("2006-01-02")}}
+	var rows []struct {
+		Headline string `json:"headline"`
+		URL      string `json:"url"`
+		Source   string `json:"source"`
+		Summary  string `json:"summary"`
+		Datetime int64  `json:"datetime"`
+	}
+	if err := f.get(ctx, "/company-news", q, &rows); err != nil {
+		return nil, err
+	}
+	out := []sdk.NewsItem{}
+	for _, r := range rows {
+		if r.Headline == "" || !strings.HasPrefix(r.URL, "https://") {
+			continue
+		}
+		summary := r.Summary
+		if len(summary) > 400 {
+			summary = summary[:400]
+		}
+		out = append(out, sdk.NewsItem{Title: r.Headline, URL: r.URL, Source: r.Source, Published: r.Datetime, Summary: summary, Symbol: symbol, Provider: "FINNHUB"})
+		if len(out) == limit {
+			break
+		}
+	}
+	return out, nil
 }

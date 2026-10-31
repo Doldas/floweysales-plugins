@@ -34,3 +34,18 @@ func TestManifestAndNewsResearch(t *testing.T) {
 }
 
 func TestConformance(t *testing.T) { plugintest.Conformance(t, newPlugin(yahooapi.New())) }
+
+func TestNewsKeepsOnlyHTTPSHeadlines(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("q") != "AAPL" || r.URL.Query().Get("newsCount") != "3" {
+			t.Errorf("unexpected request %s", r.URL)
+		}
+		_, _ = w.Write([]byte(`{"news":[{"title":"Apple event","link":"https://finance.yahoo.com/a","publisher":"Reuters","providerPublishTime":1761900000},{"title":"x","link":"http://insecure"}]}`))
+	}))
+	defer srv.Close()
+	p := newPlugin(&yahooapi.API{HTTP: httpx.New("test", 0), Base: srv.URL})
+	items, err := p.News(context.Background(), sdk.NewsParams{Symbol: "aapl", Limit: 3})
+	if err != nil || len(items) != 1 || items[0].Source != "Reuters" || items[0].Symbol != "AAPL" {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}

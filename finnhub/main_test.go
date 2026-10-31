@@ -54,3 +54,18 @@ func TestYTDFilingsBecomeQuarters(t *testing.T) {
 func TestConformance(t *testing.T) {
 	plugintest.Conformance(t, newPlugin(&finnhub{http: httpx.New("test", 0), base: "https://invalid.test"}))
 }
+
+func TestCompanyNewsBecomesHeadlines(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/company-news" || r.URL.Query().Get("symbol") != "NVDA" || r.URL.Query().Get("from") == "" {
+			t.Errorf("unexpected request %s", r.URL)
+		}
+		_, _ = w.Write([]byte(`[{"headline":"NVIDIA beats","url":"https://example.com/a","source":"Wire","datetime":1761900000},{"headline":"bad","url":"javascript:x"},{"headline":"Second","url":"https://example.com/b"}]`))
+	}))
+	defer srv.Close()
+	p := newPlugin(&finnhub{http: httpx.New("test", 0), base: srv.URL, key: "k"})
+	items, err := p.News(context.Background(), sdk.NewsParams{Symbol: "nvda", Limit: 1})
+	if err != nil || len(items) != 1 || items[0].Title != "NVIDIA beats" || items[0].Published != 1761900000 || items[0].Provider != "FINNHUB" {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}
