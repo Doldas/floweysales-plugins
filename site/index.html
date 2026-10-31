@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FloweySales plugin store</title>
+<style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#1b1f24;--muted:#57606a;--line:#d0d7de}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8d96a0;--line:#30363d}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px}
+h1{margin:0 0 8px}p{color:var(--muted)}
+ul{list-style:none;padding:0;display:grid;gap:12px}
+li{border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+code{overflow-wrap:anywhere}a{color:inherit}
+</style>
+</head>
+<body>
+<main>
+<h1>FloweySales plugin store</h1>
+<p>Market-data provider plugins for <a href="https://github.com/Doldas/floweysales">FloweySales</a>.
+Install them from <strong>Settings → Plugins</strong> or with <code>floweysales_backend plugins install &lt;id&gt;</code>.
+The backend reads <a href="index.json"><code>index.json</code></a>.</p>
+<ul id="plugins"><li>Loading…</li></ul>
+<p><a href="https://github.com/Doldas/floweysales-plugins">Source and releases</a></p>
+</main>
+<script>
+fetch('index.json').then(r => r.json()).then(index => {
+  const list = document.getElementById('plugins');
+  list.replaceChildren();
+  for (const p of index.plugins) {
+    const m = p.versions[0].manifest;
+    const li = document.createElement('li');
+    const title = document.createElement('strong');
+    title.textContent = `${m.name} ${m.version}`;
+    const meta = document.createElement('div');
+    meta.textContent = `id ${m.id} · provider ${m.provider.id}${m.provider.official_api ? '' : ' · unofficial'}${m.provider.experimental ? ' · experimental' : ''}`;
+    const desc = document.createElement('p');
+    desc.textContent = m.description;
+    li.append(title, meta, desc);
+    list.append(li);
+  }
+  if (!index.plugins.length) list.innerHTML = '<li>No plugins published yet.</li>';
+}).catch(() => { document.getElementById('plugins').innerHTML = '<li>The index could not be loaded.</li>'; });
+</script>
+</body>
+</html>

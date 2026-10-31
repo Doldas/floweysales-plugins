@@ -1,0 +1,83 @@
+{
+  "protocol": 1,
+  "id": "binance",
+  "name": "Binance",
+  "version": "1.0.0",
+  "description": "Crypto spot prices, OHLC klines, pair search and allowlisted read-only market statistics from Binance's public REST API. No account access or orders.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/binance",
+  "license": "MIT",
+  "provider": {
+    "id": "BINANCE",
+    "label": "Binance",
+    "official_api": true,
+    "experimental": false,
+    "capabilities": [
+      "quote",
+      "history",
+      "search",
+      "financials",
+      "research"
+    ],
+    "quote_kind": "ohlc_bar_close",
+    "min_poll_seconds": 2,
+    "cache_ttl_seconds": 60,
+    "notes": "Binance public API for crypto OHLC; stock financial statements are unsupported.",
+    "research": [
+      {
+        "operation": "server_time",
+        "path": "/api/v3/time",
+        "description": "Exchange server clock",
+        "symbol_required": false
+      },
+      {
+        "operation": "exchange_info",
+        "path": "/api/v3/exchangeInfo",
+        "description": "Symbol trading rules (single symbol)",
+        "symbol_required": true
+      },
+      {
+        "operation": "order_book",
+        "path": "/api/v3/depth",
+        "description": "Bounded current order book depth (not a live subscription)",
+        "symbol_required": true
+      },
+      {
+        "operation": "recent_trades",
+        "path": "/api/v3/trades",
+        "description": "Recent public matched trades",
+        "symbol_required": true
+      },
+      {
+        "operation": "aggregate_trades",
+        "path": "/api/v3/aggTrades",
+        "description": "Recent aggregated public trades",
+        "symbol_required": true
+      },
+      {
+        "operation": "average_price",
+        "path": "/api/v3/avgPrice",
+        "description": "Recent weighted average price",
+        "symbol_required": true
+      },
+      {
+        "operation": "ticker_24h",
+        "path": "/api/v3/ticker/24hr",
+        "description": "Rolling 24h trading statistics",
+        "symbol_required": true
+      },
+      {
+        "operation": "last_price",
+        "path": "/api/v3/ticker/price",
+        "description": "Latest published price (not guaranteed execution)",
+        "symbol_required": true
+      },
+      {
+        "operation": "best_bid_ask",
+        "path": "/api/v3/ticker/bookTicker",
+        "description": "Best bid and ask snapshot",
+        "symbol_required": true
+      }
+    ]
+  }
+}

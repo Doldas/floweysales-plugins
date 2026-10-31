@@ -1,0 +1,36 @@
+{
+  "protocol": 1,
+  "id": "yahoo",
+  "name": "Yahoo Finance",
+  "version": "1.0.0",
+  "description": "Equity, ETF and index quotes, OHLC history, symbol search, quarterly statements and market news from Yahoo Finance's public web interfaces.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/yahoo",
+  "license": "MIT",
+  "terms": "Yahoo Finance chart, search and fundamentals endpoints are unofficial public interfaces without a published API contract. They are not guaranteed real-time and may change or be rate limited without notice. Verify currency, fiscal period and Yahoo's terms of use before relying on the data.",
+  "provider": {
+    "id": "YAHOO",
+    "label": "Yahoo Finance",
+    "official_api": false,
+    "experimental": false,
+    "capabilities": [
+      "quote",
+      "history",
+      "search",
+      "financials",
+      "research"
+    ],
+    "quote_kind": "ohlc_bar_close",
+    "min_poll_seconds": 5,
+    "cache_ttl_seconds": 60,
+    "notes": "Yahoo chart and financials are unofficial public interfaces, not guaranteed real-time. Verify currency, fiscal period and usage conditions.",
+    "research": [
+      {
+        "operation": "market_news",
+        "path": "/v1/finance/search",
+        "description": "Yahoo public market news search (unofficial; ticker query)",
+        "symbol_required": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+name: Store index
+
+# Publishes the plugin store index (https://doldas.github.io/floweysales-plugins/index.json)
+# generated from every <id>-v<version> release.
+on:
+  push:
+    branches: [master]
+    paths: ['site/**', 'scripts/plugin-index.mjs', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: store-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: store-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate index.json from releases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/plugin-index.mjs releases "$GITHUB_REPOSITORY" > site/index.json
+          node -e "const i=require('./site/index.json'); if (i.schema !== 1) process.exit(1); console.log(i.plugins.length + ' plugins in the store')"
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+  deploy:
+    name: store-deploy
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

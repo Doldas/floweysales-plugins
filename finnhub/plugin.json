@@ -1,0 +1,92 @@
+{
+  "protocol": 1,
+  "id": "finnhub",
+  "name": "Finnhub",
+  "version": "1.0.0",
+  "description": "Quotes, candles, symbol search, SEC-reported quarterly statements and allowlisted company research (profile, peers, analyst views, earnings, dividends, news) from the official Finnhub API.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/finnhub",
+  "license": "MIT",
+  "provider": {
+    "id": "FINNHUB",
+    "label": "Finnhub",
+    "official_api": true,
+    "experimental": false,
+    "capabilities": [
+      "quote",
+      "history",
+      "search",
+      "financials",
+      "research"
+    ],
+    "quote_kind": "ohlc_bar_close",
+    "min_poll_seconds": 20,
+    "cache_ttl_seconds": 60,
+    "notes": "Official Finnhub API; plan quotas, subscription and data licensing determine access/freshness. No assumed real-time.",
+    "research": [
+      {
+        "operation": "company_profile",
+        "path": "/stock/profile2",
+        "description": "Company profile",
+        "symbol_required": true
+      },
+      {
+        "operation": "company_peers",
+        "path": "/stock/peers",
+        "description": "Peer ticker symbols",
+        "symbol_required": true
+      },
+      {
+        "operation": "recommendations",
+        "path": "/stock/recommendation",
+        "description": "Analyst recommendation aggregates",
+        "symbol_required": true
+      },
+      {
+        "operation": "price_target",
+        "path": "/stock/price-target",
+        "description": "Analyst target distribution",
+        "symbol_required": true
+      },
+      {
+        "operation": "basic_financials",
+        "path": "/stock/metric",
+        "description": "Company ratios/metrics from provider; verify against filings",
+        "symbol_required": true
+      },
+      {
+        "operation": "earnings",
+        "path": "/stock/earnings",
+        "description": "Reported earnings and estimates",
+        "symbol_required": true
+      },
+      {
+        "operation": "news_sentiment",
+        "path": "/news-sentiment",
+        "description": "Provider sentiment estimates",
+        "symbol_required": true
+      },
+      {
+        "operation": "basic_dividends",
+        "path": "/stock/dividend2",
+        "description": "Dividend history",
+        "symbol_required": true
+      },
+      {
+        "operation": "company_news",
+        "path": "/company-news",
+        "description": "Company articles in limited date window",
+        "symbol_required": true,
+        "dates_required": true
+      }
+    ]
+  },
+  "env": [
+    {
+      "name": "FINNHUB_API_KEY",
+      "secret": true,
+      "required": true,
+      "description": "Finnhub API token (finnhub.io dashboard). Sent as the X-Finnhub-Token header only."
+    }
+  ]
+}

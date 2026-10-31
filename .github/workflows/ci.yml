@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugins:
+    name: plugins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Format check
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: Module metadata is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Vet
+        run: go vet ./...
+      - name: Tests, including SDK conformance (race detector)
+        run: go test -race -count=1 ./...
+      - name: Store index generator tests
+        run: node --test scripts/plugin-index.test.mjs
+      - name: Build every plugin for every platform
+        run: scripts/build-plugins.sh -o "$RUNNER_TEMP/store" -p linux/amd64,linux/arm64,windows/amd64,darwin/amd64,darwin/arm64

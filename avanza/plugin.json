@@ -1,0 +1,37 @@
+{
+  "protocol": 1,
+  "id": "avanza",
+  "name": "Avanza (unofficial)",
+  "version": "1.0.0",
+  "description": "Swedish fund and stock snapshots, price charts, search, forum posts and quarterly statements via Avanza's public web endpoints. Experimental and unofficial.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/avanza",
+  "license": "MIT",
+  "terms": "This plugin uses undocumented, unsupported public Avanza endpoints that may change or disappear without notice. Install it only after independently confirming acceptable usage conditions and licensing. It never logs in, uses BankID, reads accounts, places orders or bypasses anti-bot protection, and spaces its requests about one second apart. When Avanza refuses chart data, history is served from Yahoo Finance and labelled as Yahoo.",
+  "provider": {
+    "id": "AVANZA",
+    "label": "Avanza",
+    "official_api": false,
+    "experimental": true,
+    "capabilities": [
+      "quote",
+      "history",
+      "search",
+      "financials",
+      "research",
+      "forum"
+    ],
+    "quote_kind": "ohlc_bar_close",
+    "min_poll_seconds": 10,
+    "cache_ttl_seconds": 60,
+    "notes": "Unpublished unofficial public Avanza endpoints. No account login, order placement or anti-bot bypass; verify usage terms and licensing before use. OHLC may use labelled Yahoo fallback.",
+    "research": [
+      {
+        "operation": "instrument_snapshot",
+        "path": "/_api/market-guide/stock | /_api/fund-guide/guide",
+        "description": "Public fund/stock instrument snapshot (unofficial)",
+        "symbol_required": true
+      }
+    ]
+  }
+}

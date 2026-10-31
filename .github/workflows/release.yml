@@ -1,0 +1,63 @@
+name: Release
+
+# Push <id>-v<version> (matching <id>/plugin.json) to publish that plugin's
+# binaries as a GitHub release and refresh the store index.
+on:
+  push:
+    tags: ['*-v*']
+
+permissions:
+  contents: write # create the release
+  actions: write  # dispatch the store index workflow
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve plugin and version from the tag
+        id: tag
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^([a-z][a-z0-9-]{1,39})-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "::error::Tag must be <id>-v<semver>"; exit 1
+          fi
+          id="${BASH_REMATCH[1]}"; version="${BASH_REMATCH[2]}"
+          [ -f "$id/plugin.json" ] || { echo "::error::$id/plugin.json does not exist"; exit 1; }
+          declared="$(node -p "require('./$id/plugin.json').version")"
+          if [ "$declared" != "$version" ]; then
+            echo "::error::$id/plugin.json declares version $declared, tag says $version"; exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=$(node -p "require('./$id/plugin.json').name")" >> "$GITHUB_OUTPUT"
+      - name: Test (including SDK conformance)
+        run: go test -race -count=1 ./...
+      - name: Build binaries
+        run: scripts/build-plugins.sh --no-index -o dist -p linux/amd64,linux/arm64,windows/amd64,darwin/amd64,darwin/arm64 "${{ steps.tag.outputs.id }}"
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ID: ${{ steps.tag.outputs.id }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          NAME: ${{ steps.tag.outputs.name }}
+        run: |
+          prerelease=""
+          [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
+          gh release create "$GITHUB_REF_NAME" dist/"$ID-$VERSION"/* \
+            --verify-tag --title "$NAME $VERSION" --generate-notes $prerelease
+      - name: Refresh the store index
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Pages deploys from master; releases made with GITHUB_TOKEN trigger no workflows.
+        run: gh workflow run pages.yml --ref master
