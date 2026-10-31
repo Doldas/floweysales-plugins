@@ -36,6 +36,9 @@ func newPlugin(api *yahooapi.API) sdk.Plugin {
 		Financials: func(ctx context.Context, p sdk.FinancialsParams) (sdk.FinancialsResponse, error) {
 			return api.Financials(ctx, p.Symbol, p.FromYear, p.ToYear)
 		},
+		News: func(ctx context.Context, p sdk.NewsParams) ([]sdk.NewsItem, error) {
+			return api.News(ctx, p.Symbol, p.Limit)
+		},
 		Research: func(ctx context.Context, p sdk.ResearchParams) (sdk.ResearchResult, error) {
 			op, err := research.Find(manifest, p.Operation)
 			if err != nil {

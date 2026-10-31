@@ -3,3 +3,5 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+go.work
+go.work.sum

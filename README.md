@@ -1,19 +1,25 @@
 # FloweySales plugins
 
-The official market-data provider plugins for
+The official market-data, news, macro and FX provider plugins for
 [FloweySales](https://github.com/Doldas/floweysales), published to the plugin
 store at **https://doldas.github.io/floweysales-plugins/index.json** (the
 backend's default `PLUGIN_STORE_URL`).
 
 | Plugin | Provider | Source | Capabilities | Notes |
 |---|---|---|---|---|
-| [`yahoo`](yahoo/plugin.json) | `YAHOO` | Yahoo Finance public web interfaces (unofficial) | quote, history, search, financials, research | Install terms must be accepted |
+| [`yahoo`](yahoo/plugin.json) | `YAHOO` | Yahoo Finance public web interfaces (unofficial) | quote, history, search, financials, research, news | Install terms must be accepted |
 | [`binance`](binance/plugin.json) | `BINANCE` | Binance public REST API (official) | quote, history, search, financials (none for crypto), research | No API key |
-| [`finnhub`](finnhub/plugin.json) | `FINNHUB` | Finnhub API (official) | quote, history, search, financials, research | Needs `FINNHUB_API_KEY` |
+| [`finnhub`](finnhub/plugin.json) | `FINNHUB` | Finnhub API (official) | quote, history, search, financials, research, news | Needs `FINNHUB_API_KEY` |
 | [`avanza`](avanza/plugin.json) | `AVANZA` | Avanza public web endpoints (unofficial, experimental) | quote, history, search, financials, research, forum | Install terms must be accepted; Yahoo history fallback is labelled `YAHOO` |
+| [`fred`](fred/plugin.json) | `FRED` | Federal Reserve Bank of St. Louis FRED API (official) | quote, history, search | Macro series as symbols (`DGS10`, `T10Y2Y`, `CPIAUCSL`, `UNRATE`); needs a free `FRED_API_KEY` |
+| [`ecb`](ecb/plugin.json) | `ECB` | European Central Bank data API (official) | quote, history, search | Euro reference rates and derived crosses (`EURUSD`, `USDSEK`); no key |
 
 Each plugin's `plugin.json` is authoritative for its research operations,
 poll interval and settings.
+
+The `news` capability feeds the **News headlines** node in Flow Studio; FRED
+and ECB series work in every watchlist, technical and screen node, so a flow
+can watch the 10-year yield or USD/SEK next to its stocks.
 
 ## Installing
 

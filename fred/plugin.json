@@ -1,0 +1,24 @@
+{
+  "protocol": 1,
+  "id": "fred",
+  "name": "FRED macro data",
+  "version": "1.0.0",
+  "description": "US and global macroeconomic series from the Federal Reserve Bank of St. Louis (FRED): Treasury yields, the yield curve, inflation, unemployment, policy rates and more. Use series IDs such as DGS10, T10Y2Y, CPIAUCSL, UNRATE or FEDFUNDS as symbols.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/fred",
+  "license": "MIT",
+  "provider": {
+    "id": "FRED",
+    "label": "FRED (St. Louis Fed)",
+    "official_api": true,
+    "experimental": false,
+    "capabilities": ["quote", "history", "search"],
+    "quote_kind": "latest_observation",
+    "min_poll_seconds": 300,
+    "cache_ttl_seconds": 3600,
+    "notes": "Official FRED API. Symbols are FRED series IDs. Observations are daily, weekly, monthly or quarterly; the currency field carries the series' units (for example Percent). Not market prices."
+  },
+  "env": [
+    {"name": "FRED_API_KEY", "secret": true, "required": true, "description": "Free API key from https://fred.stlouisfed.org/docs/api/api_key.html"}
+  ]
+}

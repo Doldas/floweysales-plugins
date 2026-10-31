@@ -268,3 +268,43 @@ func ParseFinancials(parsed map[string]any, symbol string, fromYear, toYear int)
 	}
 	return res
 }
+
+// News reads the headlines Yahoo's public search returns for a ticker.
+func (a *API) News(ctx context.Context, symbol string, limit int) ([]sdk.NewsItem, error) {
+	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	if symbol == "" {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "symbol is required")
+	}
+	if limit < 1 || limit > 20 {
+		limit = 5
+	}
+	parsed, err := a.get(ctx, "/v1/finance/search?q="+url.QueryEscape(symbol)+"&quotesCount=0&newsCount="+fmt.Sprint(limit))
+	if err != nil {
+		return nil, err
+	}
+	return ParseNews(parsed, symbol), nil
+}
+
+// ParseNews maps the search response's news array to news items.
+func ParseNews(parsed map[string]any, symbol string) []sdk.NewsItem {
+	out := []sdk.NewsItem{}
+	list, _ := parsed["news"].([]any)
+	for _, raw := range list {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		title, _ := item["title"].(string)
+		link, _ := item["link"].(string)
+		if title == "" || !strings.HasPrefix(link, "https://") {
+			continue
+		}
+		publisher, _ := item["publisher"].(string)
+		published := int64(0)
+		if t, ok := item["providerPublishTime"].(float64); ok && t > 0 {
+			published = int64(t)
+		}
+		out = append(out, sdk.NewsItem{Title: title, URL: link, Source: publisher, Published: published, Symbol: symbol, Provider: "YAHOO"})
+	}
+	return out
+}
