@@ -1,6 +1,6 @@
 // Command se-tax is the FloweySales plugin for Swedish tax on sales of
 // securities: it turns broker transaction exports into the K4 attachment,
-// with cost basis, tax estimates and the SRU files Skatteverket imports.
+// with cost basis, tax estimates and an Excel export laid out like the form.
 package main
 
 import (

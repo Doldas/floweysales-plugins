@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -51,8 +50,7 @@ func files() []map[string]string {
 
 func TestK4EndToEnd(t *testing.T) {
 	res, err := callTool(t, "k4", map[string]any{
-		"year": "2026", "files": files(), "exclude_accounts": "9999999", "personal_number": "19811218-9876",
-		"name": "Åke Öberg", "postal_code": "123 45", "city": "Göteborg", "other_income": 0,
+		"year": "2026", "files": files(), "exclude_accounts": "9999999", "other_income": 0,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,51 +82,13 @@ func TestK4EndToEnd(t *testing.T) {
 			}
 		}
 	}
-	sru := fileNamed(res, "BLANKETTER.SRU")
-	if sru == nil || fileNamed(res, "INFO.SRU") == nil || fileNamed(res, "k4-2026-rader.csv") == nil || fileNamed(res, "forsaljningar-2026.csv") == nil {
+	if fileNamed(res, "k4-2026.xlsx") == nil || fileNamed(res, "k4-2026-rader.csv") == nil || fileNamed(res, "forsaljningar-2026.csv") == nil {
 		t.Fatalf("missing files: %+v", blocksOf(res, sdk.BlockFile))
 	}
-	raw, err := base64.StdEncoding.DecodeString(sru.Content)
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := string(raw)
-	for _, want := range []string{"#BLANKETT K4-2026P4", "#IDENTITET 198112189876 20270315 103000", "#UPPGIFT 3100 10", "#UPPGIFT 3105 200", "#UPPGIFT 3110 80", "#UPPGIFT 3114 2226", "#UPPGIFT 3304 2226", "#UPPGIFT 3305 200", "#FIL_SLUT"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("SRU lacks %q:\n%s", want, strings.ReplaceAll(body, "\r\n", "\n"))
+	for _, f := range blocksOf(res, sdk.BlockFile) {
+		if strings.HasSuffix(f.File.Name, ".SRU") {
+			t.Errorf("no SRU files any more: %s", f.File.Name)
 		}
-	}
-	if strings.Contains(strings.Join(noticeTexts(res), " "), "19811218") {
-		t.Error("the personal number must be masked in the display")
-	}
-}
-
-func noticeTexts(r sdk.ToolResult) []string {
-	var out []string
-	for _, b := range r.Blocks {
-		out = append(out, b.Title, b.Text)
-	}
-	return out
-}
-
-func TestK4WithoutPersonalNumberSkipsTheSRUFilesButKeepsTheCSV(t *testing.T) {
-	res, err := callTool(t, "k4", map[string]any{"year": "2026", "files": files(), "exclude_accounts": "9999999"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fileNamed(res, "BLANKETTER.SRU") != nil || fileNamed(res, "k4-2026-rader.csv") == nil {
-		t.Errorf("%+v", blocksOf(res, sdk.BlockFile))
-	}
-	res, err = callTool(t, "k4", map[string]any{"year": "2026", "files": files(), "personal_number": "19811218-9875", "name": "X", "postal_code": "1", "city": ""})
-	if err != nil || fileNamed(res, "BLANKETTER.SRU") != nil {
-		t.Fatalf("a bad personal number must not produce a file: %v", err)
-	}
-	var found bool
-	for _, b := range blocksOf(res, sdk.BlockNotice) {
-		found = found || (b.Level == sdk.LevelError && strings.Contains(b.Text, "check digit") && strings.Contains(b.Text, "postal code"))
-	}
-	if !found {
-		t.Errorf("expected an error notice listing the problems: %+v", blocksOf(res, sdk.BlockNotice))
 	}
 }
 

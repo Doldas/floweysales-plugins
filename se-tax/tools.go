@@ -15,7 +15,7 @@ import (
 )
 
 // supportedYears are the income years whose K4 field table has been checked
-// against Skatteverket's SRU specification (2025P4 and 2026P4 are identical).
+// against Skatteverket's K4 field table (SKV 2104; 2025P4 and 2026P4 are identical).
 var supportedYears = []int{2025, 2026}
 
 type taxPlugin struct{ now func() time.Time }
@@ -212,11 +212,6 @@ func csvFile(name, desc string, records [][]string) *sdk.ToolOutput {
 func (t *taxPlugin) k4Inputs() []sdk.ToolInput {
 	in := append([]sdk.ToolInput{yearInput()}, fileInputs()...)
 	in = append(in, methodInput(),
-		sdk.ToolInput{Name: "personal_number", Label: "Personal number (for the SRU file)", Type: sdk.InputText, Placeholder: "ÅÅÅÅMMDD-NNNN",
-			Help: "Only needed to create the file for Skatteverket. It is written into the file and shown masked; it is not stored."},
-		sdk.ToolInput{Name: "name", Label: "Full name (for the SRU file)", Type: sdk.InputText},
-		sdk.ToolInput{Name: "postal_code", Label: "Postal code", Type: sdk.InputText, Placeholder: "12345"},
-		sdk.ToolInput{Name: "city", Label: "Postal town", Type: sdk.InputText},
 		sdk.ToolInput{Name: "other_income", Label: "Other capital income, SEK (optional)", Type: sdk.InputNumber,
 			Help: "Interest and dividends minus interest costs for the year, only used for the tax estimate."})
 	return in
@@ -264,6 +259,14 @@ func (t *taxPlugin) k4(p sdk.ToolParams) (sdk.ToolResult, error) {
 		*blocks = append(*blocks, notice(sdk.LevelWarning, "Things to look at", bullets(w)))
 	}
 
+	*blocks = append(*blocks, notice(sdk.LevelInfo, "How to fill in the K4",
+		bullets([]string{
+			fmt.Sprintf("Open the K4 attachment (SKV 2104) in your income tax return for %d: on paper or in Skatteverket's e-service.", year),
+			"For each row in the tables below, copy Antal, Beteckning, Försäljningspris and Omkostnadsbelopp, then Vinst or Förlust (only one of them has a value).",
+			"Use the same page and row order; when a table says page 2, start a new K4 page. Compare the Summa line with the form's own sum.",
+			"Then carry the totals to INK1: boxes 7.4 and 8.3 for section A, 7.5 and 8.4 for section D (table further down).",
+			"Use the Copy button on a table to paste the rows into a spreadsheet, or download the Excel workbook.",
+		})))
 	for _, pg := range pages {
 		if len(pg.A) > 0 {
 			*blocks = append(*blocks, k4Table(fmt.Sprintf("K4 page %d of %d — section A (listed shares, funds)", pg.Number, len(pages)), pg.A, pg.SumA))
@@ -298,51 +301,16 @@ func (t *taxPlugin) k4(p sdk.ToolParams) (sdk.ToolResult, error) {
 		rowsCSV = append(rowsCSV, []string{r.Class.Section(), qtyText(r), r.Name, r.ISIN, r.Class.Label(),
 			strconv.FormatInt(r.Proceeds, 10), strconv.FormatInt(r.Cost, 10), strconv.FormatInt(r.Gain, 10), strconv.FormatInt(r.Loss, 10)})
 	}
-	*blocks = append(*blocks,
-		sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile(fmt.Sprintf("k4-%d-rader.csv", year), "The K4 rows as a spreadsheet, for typing into the form or checking.", rowsCSV)},
-		sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile(fmt.Sprintf("forsaljningar-%d.csv", year), "Every sale with the cost by both methods, for your records.", detail)})
-
-	*blocks = append(*blocks, t.sruBlocks(p, year, pages)...)
-	return res, nil
-}
-
-func (t *taxPlugin) sruBlocks(p sdk.ToolParams, year int, pages []Page) []sdk.ToolBlock {
-	pn := strings.TrimSpace(p.String("personal_number"))
-	if pn == "" {
-		return []sdk.ToolBlock{notice(sdk.LevelInfo, "File for Skatteverket not created",
-			"Fill in your personal number, name and postal address and run again to also get BLANKETTER.SRU and INFO.SRU, the files Skatteverket's service can import.")}
-	}
-	now := t.now()
-	number, err := ValidatePersonalNumber(pn, now)
-	postal := strings.NewReplacer(" ", "").Replace(p.String("postal_code"))
-	var problems []string
+	book, err := k4Workbook(year, pages, rows, totals, est, l.result.Sales, l.warnings())
 	if err != nil {
-		problems = append(problems, err.Error())
+		return sdk.ToolResult{}, sdk.Errorf(sdk.CodeInternal, "build workbook: %v", err)
 	}
-	if strings.TrimSpace(p.String("name")) == "" {
-		problems = append(problems, "the name is empty")
-	}
-	if len(postal) != 5 || strings.Trim(postal, "0123456789") != "" {
-		problems = append(problems, "the postal code needs 5 digits")
-	}
-	if strings.TrimSpace(p.String("city")) == "" {
-		problems = append(problems, "the postal town is empty")
-	}
-	if len(problems) > 0 {
-		return []sdk.ToolBlock{notice(sdk.LevelError, "File for Skatteverket not created", bullets(problems))}
-	}
-	f := Filer{PersonalNumber: number, Name: p.String("name"), PostalCode: postal, City: p.String("city")}
-	blanketter := BlanketterSRU(f, year, pages, now)
-	info := InfoSRU(f, now)
-	return []sdk.ToolBlock{
-		notice(sdk.LevelSuccess, "Files for Skatteverket",
-			fmt.Sprintf("Created for %s (%s), income year %d, %d K4 page(s). Import them in Skatteverket's income tax service (log in, open the K4 attachment and choose the import/file option). Then check every row and the sums on screen before you sign; the service does the final calculation. Do not rename the files.",
-				clip(f.Name, 60), MaskPersonalNumber(number), year, len(pages))),
-		{Type: sdk.BlockFile, File: &sdk.ToolOutput{Name: "BLANKETTER.SRU", MIME: "text/plain", Encoding: "base64", Content: b64(blanketter),
-			Description: fmt.Sprintf("K4-%dP4 blocks (ISO-8859-1)", year)}},
-		{Type: sdk.BlockFile, File: &sdk.ToolOutput{Name: "INFO.SRU", MIME: "text/plain", Encoding: "base64", Content: b64(info),
-			Description: "Sender information that goes with BLANKETTER.SRU"}},
-	}
+	*blocks = append(*blocks,
+		sdk.ToolBlock{Type: sdk.BlockFile, File: &sdk.ToolOutput{Name: fmt.Sprintf("k4-%d.xlsx", year), MIME: xlsxMIME, Encoding: "base64", Content: b64(book),
+			Description: "Excel workbook: summary, the K4 rows laid out like the form (section A and D, with SUM lines), every sale and the things to check."}},
+		sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile(fmt.Sprintf("k4-%d-rader.csv", year), "The K4 rows as CSV, for pasting into any spreadsheet.", rowsCSV)},
+		sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile(fmt.Sprintf("forsaljningar-%d.csv", year), "Every sale with the cost by both methods, for your records.", detail)})
+	return res, nil
 }
 
 func k4Table(title string, rows []Row, s Sums) sdk.ToolBlock {
@@ -363,11 +331,11 @@ func k4Table(title string, rows []Row, s Sums) sdk.ToolBlock {
 func methodLabel(r Row) string {
 	switch {
 	case r.FlatRateSales > 0 && r.AverageSales > 0:
-		return "mixed"
+		return "blandad"
 	case r.FlatRateSales > 0:
-		return "20% (schablon)"
+		return "schablon 20 %"
 	}
-	return "average"
+	return "genomsnitt"
 }
 
 func sumProceeds(rows []Row) int64 {
@@ -455,8 +423,15 @@ func (t *taxPlugin) holdings(p sdk.ToolParams) (sdk.ToolResult, error) {
 	if w := l.warnings(); len(w) > 0 {
 		res.Blocks = append(res.Blocks, notice(sdk.LevelWarning, "Things to look at", bullets(w)))
 	}
-	res.Blocks = append(res.Blocks, tbl, accountsTable(l.report), sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile("opening-balance-"+next+".csv",
-		"The holdings above as opening balances. Next year, upload this file instead of all the old history (generic CSV format).", opening)})
+	book, err := holdingsWorkbook(asOf.Format("2006-01-02"), l.result.Holdings)
+	if err != nil {
+		return sdk.ToolResult{}, sdk.Errorf(sdk.CodeInternal, "build workbook: %v", err)
+	}
+	res.Blocks = append(res.Blocks, tbl, accountsTable(l.report),
+		sdk.ToolBlock{Type: sdk.BlockFile, File: &sdk.ToolOutput{Name: "holdings-" + asOf.Format("2006-01-02") + ".xlsx", MIME: xlsxMIME, Encoding: "base64", Content: b64(book),
+			Description: "The holdings above as an Excel sheet."}},
+		sdk.ToolBlock{Type: sdk.BlockFile, File: csvFile("opening-balance-"+next+".csv",
+			"The holdings above as opening balances. Next year, upload this file instead of all the old history (generic CSV format).", opening)})
 	return res, nil
 }
 
@@ -678,7 +653,7 @@ func (t *taxPlugin) guide(sdk.ToolParams) (sdk.ToolResult, error) {
 			})),
 		text("Generic CSV format. Use it for other brokers or to add history by hand. Columns: date (YYYY-MM-DD), type (buy, sell, opening, split, transfer_in, transfer_out), name, isin, class (aktie, aktiefond, blandfond, ranfond, krypto, onoterad), quantity, amount_sek (price × quantity before the fee; for 'opening' the total cost; empty for split), fee_sek, account. For a split give the change in the number of units as the quantity (a 2:1 split of 100 shares is +100). Semicolon- or comma-separated; decimals with point or comma."),
 		{Type: sdk.BlockFile, File: &sdk.ToolOutput{Name: "generic-transactions-template.csv", MIME: "text/csv", Encoding: "utf8", Content: genericTemplate, Description: "Example rows for the generic CSV format"}},
-		text("Sources: Skatteverket — Deklarera aktier och övriga värdepapper (skatteverket.se/privat/skatter/vardepapper), 'Räkna ut omkostnadsbelopp', 'Kvittning och kvotering', and the SRU file specification with the K4 field table SKV 2104 (2025P4 and 2026P4)."),
+		text("Sources: Skatteverket — Deklarera aktier och övriga värdepapper (skatteverket.se/privat/skatter/vardepapper), 'Räkna ut omkostnadsbelopp', 'Kvittning och kvotering', and the K4 form SKV 2104."),
 	}
 	return res, nil
 }

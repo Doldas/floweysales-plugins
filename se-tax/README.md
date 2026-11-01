@@ -3,9 +3,10 @@
 Adds a **Tax** tab to FloweySales for Swedish investors. In the spring, when you
 declare last year's sales of shares and funds, it turns your broker's
 transaction export into the **K4** attachment: every row (*antal, beteckning,
-försäljningspris, omkostnadsbelopp, vinst, förlust*), the amounts for boxes
-7.4 / 8.3 / 7.5 / 8.4, a tax estimate, and the **BLANKETTER.SRU** + **INFO.SRU**
-files that Skatteverket's service can import.
+försäljningspris, omkostnadsbelopp, vinst, förlust*) in the form's own order and page
+layout, the amounts for boxes 7.4 / 8.3 / 7.5 / 8.4, a tax estimate, and an
+**Excel workbook** you can keep, check or copy from while you fill in the K4.
+Nothing is uploaded to Skatteverket.
 
 It is a plugin with the `tools` capability and no market-data provider. Install
 it from Settings → Plugins, or `floweysales_backend plugins install se-tax`.
@@ -14,8 +15,8 @@ it from Settings → Plugins, or `floweysales_backend plugins install se-tax`.
 
 | Tool | What it does |
 |---|---|
-| **K4 report** | Cost basis for every sale in the income year, K4 pages (nine section A rows and seven section D rows per page), INK1 amounts, tax estimate, CSV exports and the SRU files |
-| **Holdings & cost basis** | What you still own with total and average cost (*genomsnittligt omkostnadsbelopp*); exports an opening-balance CSV so next year you do not need the old history |
+| **K4 report** | Cost basis for every sale in the income year, a step-by-step fill-in guide, K4 pages (nine section A rows and seven section D rows per page), INK1 amounts, tax estimate, and an Excel workbook (summary, K4 A/D sheets with SUM lines, all sales, things to check) plus CSV exports |
+| **Holdings & cost basis** | What you still own with total and average cost (*genomsnittligt omkostnadsbelopp*), as a table and Excel sheet; exports an opening-balance CSV so next year you do not need the old history |
 | **What if I sell?** | Cost basis, gain and the change in this year's tax for planned sales, including the effect of losses |
 | **Tax estimate** | A calculator from totals: 30% tax, the 70% rule, the tax reduction on a deficit |
 | **Review import** | The accounts in your files (to leave out ISK/KF/IPS), transaction types and the type guessed for each instrument |
@@ -29,7 +30,7 @@ it from Settings → Plugins, or `floweysales_backend plugins install se-tax`.
   (`type=opening`, from the Holdings tool) and manual corrections. A template is in the Guide tool.
 
 Files are processed in memory for the one request. Nothing is stored or logged by
-the plugin or the backend, and the personal number is only written into the SRU file.
+the plugin or the backend. No personal number or address is asked for.
 
 ## What it computes
 
@@ -49,13 +50,13 @@ Options, futures, CFDs, warrants and currency trading (K4 sections B/C), deferre
 gifts and inheritances, qualified shares. The tool says so in the Guide and warns when a sale cannot be
 matched to a purchase history or shares arrived by transfer without a cost.
 
-## SRU files
+## Excel export
 
-`BLANKETTER.SRU` holds one `K4-<year>P4` block per page with the field codes from Skatteverket's K4 field table
-(SKV 2104; the 2025P4 and 2026P4 tables are identical), ISO-8859-1, CR+LF. `INFO.SRU` carries the sender
-(personal number, name, postal code and town). Do not rename the files.
-Supported income years are listed in `supportedYears`; before adding the next year, compare Skatteverket's
-`K4_SKV2104` field table for the new period with the codes in `sru.go`.
+`k4-<year>.xlsx` is written without dependencies (`xlsx.go`) and opens in Excel, LibreOffice and Google Sheets. Sheets:
+*Sammanfattning* (INK1 boxes and the estimate), *K4 avsnitt A* and *K4 avsnitt D* (rows exactly like the form, one block per
+K4 page, `SUM` formulas for the Summa lines and a total over all pages), *Försäljningar* (every sale with both cost methods) and
+*Att kontrollera* (warnings). Supported income years are listed in `supportedYears`; before adding the next year compare
+Skatteverket's `K4_SKV2104` field table for the new period (the row layout, 9 + 7 rows per page, is what `k4.go` relies on).
 
 ## Development
 

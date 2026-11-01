@@ -148,3 +148,11 @@ func (e Estimate) Compute(otherIncome float64) Estimate {
 // NetEffect is the tax paid (positive) or saved through the reduction
 // (negative); useful for comparing two scenarios.
 func (e Estimate) NetEffect() float64 { return e.Tax - e.TaxReduction }
+
+// rowLabel is the "Beteckning": the name as the bank prints it.
+func rowLabel(r Row) string {
+	if r.Name != "" {
+		return r.Name
+	}
+	return r.ISIN
+}

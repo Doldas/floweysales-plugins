@@ -1,5 +1,5 @@
 {
-  "description": "A Tax tab for Swedish investors: turns Avanza or generic CSV transactions into the K4 attachment for selling shares and funds, with average cost and the 20% flat rate, a BLANKETTER.SRU file Skatteverket can import, holdings, a what-if sale planner and a tax estimate.",
+  "description": "A Tax tab for Swedish investors: turns Avanza or generic CSV transactions into the K4 attachment for selling shares and funds, with average cost and the 20% flat rate, an Excel export, holdings, a what-if sale planner and a tax estimate.",
   "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/se-tax",
   "id": "se-tax",
   "license": "MIT",
@@ -8,13 +8,13 @@
   "publisher": "FloweySales",
   "tools": {
     "tab": {
-      "description": "Swedish capital gains tax on shares and funds: prepare the K4 attachment for your income tax return. Your files are processed in memory and are not stored.",
+      "description": "Swedish capital gains tax on shares and funds: fill in the K4 attachment for your income tax return, or export it to Excel. Your files are processed in memory and are not stored.",
       "icon": "bi-receipt",
       "label": "Tax"
     },
     "tools": [
       {
-        "description": "Upload your transactions and get every K4 row (antal, beteckning, försäljningspris, omkostnadsbelopp, vinst, förlust), the totals for boxes 7.4/8.3, a tax estimate, and BLANKETTER.SRU for Skatteverket.",
+        "description": "Upload your transactions and get every K4 row (antal, beteckning, försäljningspris, omkostnadsbelopp, vinst, förlust), the totals for boxes 7.4/8.3, a tax estimate, and an Excel workbook laid out like the form.",
         "id": "k4",
         "inputs": [
           {
@@ -94,29 +94,6 @@
             "type": "select"
           },
           {
-            "help": "Only needed to create the file for Skatteverket. It is written into the file and shown masked; it is not stored.",
-            "label": "Personal number (for the SRU file)",
-            "name": "personal_number",
-            "placeholder": "ÅÅÅÅMMDD-NNNN",
-            "type": "text"
-          },
-          {
-            "label": "Full name (for the SRU file)",
-            "name": "name",
-            "type": "text"
-          },
-          {
-            "label": "Postal code",
-            "name": "postal_code",
-            "placeholder": "12345",
-            "type": "text"
-          },
-          {
-            "label": "Postal town",
-            "name": "city",
-            "type": "text"
-          },
-          {
             "help": "Interest and dividends minus interest costs for the year, only used for the tax estimate.",
             "label": "Other capital income, SEK (optional)",
             "name": "other_income",
@@ -127,7 +104,7 @@
         "submit": "Calculate K4"
       },
       {
-        "description": "Your remaining holdings with total and average cost per unit (genomsnittligt omkostnadsbelopp). Exports an opening-balance file so next year you do not need the old history.",
+        "description": "Your remaining holdings with total and average cost per unit (genomsnittligt omkostnadsbelopp), as a table and an Excel sheet. Exports an opening-balance file so next year you do not need the old history.",
         "id": "holdings",
         "inputs": [
           {
