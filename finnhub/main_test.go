@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	sdk "github.com/Doldas/floweysales/pluginsdk"
 	"github.com/Doldas/floweysales/pluginsdk/httpx"
@@ -67,5 +68,73 @@ func TestCompanyNewsBecomesHeadlines(t *testing.T) {
 	items, err := p.News(context.Background(), sdk.NewsParams{Symbol: "nvda", Limit: 1})
 	if err != nil || len(items) != 1 || items[0].Title != "NVIDIA beats" || items[0].Published != 1761900000 || items[0].Provider != "FINNHUB" {
 		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}
+
+func TestEventsCombineEarningsAndDividends(t *testing.T) {
+	soon := time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02")
+	far := time.Now().UTC().AddDate(0, 0, 40).Format("2006-01-02")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Finnhub-Token") != "k" || strings.Contains(r.URL.RawQuery, "token") {
+			t.Errorf("token must be a header only: %s", r.URL)
+		}
+		switch r.URL.Path {
+		case "/calendar/earnings":
+			if r.URL.Query().Get("symbol") != "AAPL" || r.URL.Query().Get("from") != "2026-11-01" {
+				t.Errorf("window: %s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`{"earningsCalendar":[{"date":"` + far + `","hour":"","symbol":"AAPL"},{"date":"` + soon + `","hour":"amc","symbol":"AAPL"},{"date":"nonsense","symbol":"AAPL"},{"date":"` + soon + `","symbol":"MSFT"}]}`))
+		case "/stock/dividend2":
+			_, _ = w.Write([]byte(`{"data":[{"date":"2026-11-14","amount":0.26,"currency":"USD"},{"date":"2026-12-12","amount":0},{"date":"2025-01-01","amount":9}]}`))
+		default:
+			t.Errorf("unexpected %s", r.URL)
+		}
+	}))
+	defer srv.Close()
+	p := newPlugin(&finnhub{http: httpx.New("test", 0), base: srv.URL, key: "k"})
+	events, err := p.Events(context.Background(), sdk.EventsParams{Symbol: "aapl", From: "2026-11-01", To: "2026-12-31"})
+	if err != nil || len(events) != 4 {
+		t.Fatalf("%v %+v", err, events)
+	}
+	byKind := map[string][]sdk.CorporateEvent{}
+	for _, e := range events {
+		byKind[e.Kind] = append(byKind[e.Kind], e)
+		if e.Provider != "FINNHUB" || e.Symbol != "AAPL" {
+			t.Errorf("%+v", e)
+		}
+	}
+	if len(byKind["earnings"]) != 2 || !byKind["earnings"][0].Confirmed || byKind["earnings"][1].Confirmed {
+		t.Fatalf("a near date with an hour is confirmed, a far estimate is not: %+v", byKind["earnings"])
+	}
+	d := byKind["dividend"]
+	if len(d) != 2 || d[0].Amount == nil || *d[0].Amount != 0.26 || d[0].Currency != "USD" || d[1].Amount != nil {
+		t.Fatalf("a zero dividend amount is unknown, not 0: %+v", d)
+	}
+	for _, bad := range []sdk.EventsParams{{Symbol: "", From: "2026-11-01", To: "2026-11-02"}, {Symbol: "AAPL", From: "x", To: "2026-11-02"}, {Symbol: "AAPL", From: "2026-11-01", To: "2028-01-01"}} {
+		if _, err := p.Events(context.Background(), bad); err == nil {
+			t.Errorf("%+v should be refused", bad)
+		}
+	}
+}
+
+func TestEventsSkipDividendsTheKeyCannotRead(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/stock/dividend2" {
+			http.Error(w, "You don't have access to this resource.", 403)
+			return
+		}
+		_, _ = w.Write([]byte(`{"earningsCalendar":[{"date":"2026-11-20","hour":"bmo","symbol":"AAPL"}]}`))
+	}))
+	defer srv.Close()
+	p := newPlugin(&finnhub{http: httpx.New("test", 0), base: srv.URL, key: "k"})
+	events, err := p.Events(context.Background(), sdk.EventsParams{Symbol: "AAPL", From: "2026-11-01", To: "2026-12-31"})
+	if err != nil || len(events) != 1 || events[0].Kind != "earnings" {
+		t.Fatalf("earnings alone: %v %+v", err, events)
+	}
+	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "no", 403) }))
+	defer failing.Close()
+	p = newPlugin(&finnhub{http: httpx.New("test", 0), base: failing.URL, key: "k"})
+	if _, err := p.Events(context.Background(), sdk.EventsParams{Symbol: "AAPL", From: "2026-11-01", To: "2026-12-31"}); err == nil {
+		t.Fatal("when both fail the error is reported")
 	}
 }

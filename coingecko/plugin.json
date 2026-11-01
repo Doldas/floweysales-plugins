@@ -1,0 +1,24 @@
+{
+  "protocol": 1,
+  "id": "coingecko",
+  "name": "CoinGecko",
+  "version": "1.0.0",
+  "description": "Crypto prices, daily and intraday history and coin search from CoinGecko's public API. Symbols are CoinGecko coin IDs such as bitcoin or ethereum. No account access or orders.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/coingecko",
+  "license": "MIT",
+  "provider": {
+    "id": "COINGECKO",
+    "label": "CoinGecko",
+    "official_api": true,
+    "experimental": false,
+    "capabilities": ["quote", "history", "search"],
+    "quote_kind": "latest_price",
+    "min_poll_seconds": 60,
+    "cache_ttl_seconds": 60,
+    "notes": "Official CoinGecko API, prices in USD. History is a price line: open, high, low and close are all the same price. The free API serves one year of history, so longer ranges return that year and say so in the range field. The free tier has strict rate limits; a demo key raises them."
+  },
+  "env": [
+    {"name": "COINGECKO_API_KEY", "secret": true, "required": false, "description": "Optional free demo key from https://www.coingecko.com/en/api for higher rate limits"}
+  ]
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -306,5 +307,92 @@ func ParseNews(parsed map[string]any, symbol string) []sdk.NewsItem {
 		}
 		out = append(out, sdk.NewsItem{Title: title, URL: link, Source: publisher, Published: published, Symbol: symbol, Provider: "YAHOO"})
 	}
+	return out
+}
+
+// Events reads dividends and splits between two ISO dates from the chart
+// endpoint's events. Earnings dates are not offered: Yahoo's chart does not
+// carry them reliably.
+func (a *API) Events(ctx context.Context, symbol, from, to string) ([]sdk.CorporateEvent, error) {
+	formatted := strings.ToUpper(strings.TrimSpace(symbol))
+	if formatted == "" {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "symbol is required")
+	}
+	start, err := time.Parse("2006-01-02", from)
+	if err != nil {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "from must be a date like 2026-11-01")
+	}
+	end, err := time.Parse("2006-01-02", to)
+	if err != nil || end.Before(start) || end.Sub(start) > 400*24*time.Hour {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "to must be a date within 400 days after from")
+	}
+	parsed, err := a.get(ctx, fmt.Sprintf("/v8/finance/chart/%s?period1=%d&period2=%d&interval=1d&events=div%%2Csplit",
+		url.PathEscape(formatted), start.Unix(), end.AddDate(0, 0, 1).Unix()))
+	if err != nil {
+		return nil, fmt.Errorf("[YahooEvents] request failed for %s: %w", formatted, err)
+	}
+	return ParseEvents(parsed, formatted, start, end), nil
+}
+
+// ParseEvents maps the chart response's events to corporate events inside
+// [from, to]. A dividend amount that is missing stays absent.
+func ParseEvents(parsed map[string]any, symbol string, from, to time.Time) []sdk.CorporateEvent {
+	out := []sdk.CorporateEvent{}
+	chart, _ := parsed["chart"].(map[string]any)
+	results, _ := chart["result"].([]any)
+	if len(results) == 0 {
+		return out
+	}
+	first, _ := results[0].(map[string]any)
+	meta, _ := first["meta"].(map[string]any)
+	currency, _ := meta["currency"].(string)
+	events, _ := first["events"].(map[string]any)
+	day := func(raw any) (string, bool) {
+		ts, ok := raw.(float64)
+		if !ok || ts <= 0 {
+			return "", false
+		}
+		d := time.Unix(int64(ts), 0).UTC()
+		if d.Before(from) || d.After(to.AddDate(0, 0, 1)) {
+			return "", false
+		}
+		return d.Format("2006-01-02"), true
+	}
+	dividends, _ := events["dividends"].(map[string]any)
+	for _, raw := range dividends {
+		item, _ := raw.(map[string]any)
+		date, ok := day(item["date"])
+		if !ok {
+			continue
+		}
+		ev := sdk.CorporateEvent{Symbol: symbol, Kind: "dividend", Date: date, Currency: currency, Confirmed: true, Provider: "YAHOO"}
+		if amount, ok := item["amount"].(float64); ok && amount > 0 {
+			ev.Amount = &amount
+		}
+		out = append(out, ev)
+	}
+	splits, _ := events["splits"].(map[string]any)
+	for _, raw := range splits {
+		item, _ := raw.(map[string]any)
+		date, ok := day(item["date"])
+		if !ok {
+			continue
+		}
+		ratio, _ := item["splitRatio"].(string)
+		if ratio == "" {
+			n, _ := item["numerator"].(float64)
+			d, _ := item["denominator"].(float64)
+			if n > 0 && d > 0 {
+				ratio = fmt.Sprintf("%g:%g", n, d)
+			}
+		}
+		out = append(out, sdk.CorporateEvent{Symbol: symbol, Kind: "split", Date: date, Ratio: ratio, Confirmed: true, Provider: "YAHOO"})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Date != out[j].Date {
+			return out[i].Date < out[j].Date
+		}
+		return out[i].Kind < out[j].Kind
+	})
 	return out
 }

@@ -8,7 +8,7 @@ import (
 	sdk "github.com/Doldas/floweysales/pluginsdk"
 )
 
-var official = []string{"yahoo", "binance", "finnhub", "avanza", "fred", "ecb"}
+var official = []string{"yahoo", "binance", "finnhub", "avanza", "fred", "ecb", "coingecko", "stooq"}
 
 func TestManifestsMatchDirectoriesAndPolicy(t *testing.T) {
 	providers := map[string]string{}

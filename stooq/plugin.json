@@ -1,0 +1,22 @@
+{
+  "protocol": 1,
+  "id": "stooq",
+  "name": "Stooq",
+  "version": "1.0.0",
+  "description": "Free daily prices for US stocks, ETFs and a few major indices from Stooq's CSV downloads. A fallback when other providers are rate limited. No key.",
+  "publisher": "FloweySales",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/stooq",
+  "license": "MIT",
+  "terms": "Stooq's CSV download is an unofficial public interface without a published API contract. It may change, be rate limited or stop without notice, and its data is not guaranteed complete or real-time. Only US-listed tickers (AAPL, SPY, BRK-B) and the indices ^SPX, ^DJI, ^NDX and ^IXIC are supported. Verify Stooq's terms of use before relying on the data.",
+  "provider": {
+    "id": "STOOQ",
+    "label": "Stooq",
+    "official_api": false,
+    "experimental": false,
+    "capabilities": ["quote", "history"],
+    "quote_kind": "ohlc_bar_close",
+    "min_poll_seconds": 30,
+    "cache_ttl_seconds": 300,
+    "notes": "Unofficial daily CSV, not real-time. US tickers only (priced in USD); non-US tickers such as VOLV-B.ST are not supported. Intraday ranges return daily bars."
+  }
+}
