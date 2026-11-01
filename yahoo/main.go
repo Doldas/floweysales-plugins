@@ -36,6 +36,9 @@ func newPlugin(api *yahooapi.API) sdk.Plugin {
 		Financials: func(ctx context.Context, p sdk.FinancialsParams) (sdk.FinancialsResponse, error) {
 			return api.Financials(ctx, p.Symbol, p.FromYear, p.ToYear)
 		},
+		Events: func(ctx context.Context, p sdk.EventsParams) ([]sdk.CorporateEvent, error) {
+			return api.Events(ctx, p.Symbol, p.From, p.To)
+		},
 		News: func(ctx context.Context, p sdk.NewsParams) ([]sdk.NewsItem, error) {
 			return api.News(ctx, p.Symbol, p.Limit)
 		},

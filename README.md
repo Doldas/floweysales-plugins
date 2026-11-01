@@ -7,17 +7,19 @@ backend's default `PLUGIN_STORE_URL`).
 
 | Plugin | Provider | Source | Capabilities | Notes |
 |---|---|---|---|---|
-| [`yahoo`](yahoo/plugin.json) | `YAHOO` | Yahoo Finance public web interfaces (unofficial) | quote, history, search, financials, research, news | Install terms must be accepted |
+| [`yahoo`](yahoo/plugin.json) | `YAHOO` | Yahoo Finance public web interfaces (unofficial) | quote, history, search, financials, research, news, events | Install terms must be accepted; events are past dividends and splits |
 | [`binance`](binance/plugin.json) | `BINANCE` | Binance public REST API (official) | quote, history, search, financials (none for crypto), research | No API key |
-| [`finnhub`](finnhub/plugin.json) | `FINNHUB` | Finnhub API (official) | quote, history, search, financials, research, news | Needs `FINNHUB_API_KEY` |
+| [`finnhub`](finnhub/plugin.json) | `FINNHUB` | Finnhub API (official) | quote, history, search, financials, research, news, events | Needs `FINNHUB_API_KEY`; events are earnings dates and, on plans that include them, dividends |
 | [`avanza`](avanza/plugin.json) | `AVANZA` | Avanza public web endpoints (unofficial, experimental) | quote, history, search, financials, research, forum | Install terms must be accepted; Yahoo history fallback is labelled `YAHOO` |
 | [`fred`](fred/plugin.json) | `FRED` | Federal Reserve Bank of St. Louis FRED API (official) | quote, history, search | Macro series as symbols (`DGS10`, `T10Y2Y`, `CPIAUCSL`, `UNRATE`); needs a free `FRED_API_KEY` |
+| [`coingecko`](coingecko/plugin.json) | `COINGECKO` | CoinGecko public API (official) | quote, history, search | Symbols are coin IDs (`bitcoin`, `ethereum`); prices in USD, history is a price line (o=h=l=c) limited to one year; optional `COINGECKO_API_KEY` demo key |
+| [`stooq`](stooq/plugin.json) | `STOOQ` | Stooq daily CSV (unofficial) | quote, history | A fallback when Yahoo is rate limited: US tickers and a few indices only; install terms must be accepted |
 | [`ecb`](ecb/plugin.json) | `ECB` | European Central Bank data API (official) | quote, history, search | Euro reference rates and derived crosses (`EURUSD`, `USDSEK`); no key |
 
 Each plugin's `plugin.json` is authoritative for its research operations,
 poll interval and settings.
 
-The `news` capability feeds the **News headlines** node in Flow Studio; FRED
+The `events` capability (dividends, splits, earnings dates) feeds the **Dividends & earnings** node and the Financials page's Upcoming strip, and the `news` capability feeds the **News headlines** node in Flow Studio; FRED
 and ECB series work in every watchlist, technical and screen node, so a flow
 can watch the 10-year yield or USD/SEK next to its stocks.
 

@@ -56,7 +56,8 @@ func newPlugin(f *finnhub) sdk.Plugin {
 		Research: func(ctx context.Context, p sdk.ResearchParams) (sdk.ResearchResult, error) {
 			return f.research(ctx, manifest, p)
 		},
-		News: f.news,
+		News:   f.news,
+		Events: f.events,
 	}
 }
 
@@ -353,5 +354,67 @@ func (f *finnhub) news(ctx context.Context, p sdk.NewsParams) ([]sdk.NewsItem, e
 			break
 		}
 	}
+	return out, nil
+}
+
+// events returns earnings dates and, when the API plan allows it, dividends
+// between two ISO dates. A date is confirmed when Finnhub names the reporting
+// hour or when it is within a week; otherwise it is an estimate. Dividends are
+// a paid-plan endpoint: when it is refused, earnings are returned alone.
+func (f *finnhub) events(ctx context.Context, p sdk.EventsParams) ([]sdk.CorporateEvent, error) {
+	symbol := strings.ToUpper(strings.TrimSpace(p.Symbol))
+	if symbol == "" {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "symbol is required")
+	}
+	start, err := time.Parse("2006-01-02", p.From)
+	if err != nil {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "from must be a date like 2026-11-01")
+	}
+	end, err := time.Parse("2006-01-02", p.To)
+	if err != nil || end.Before(start) || end.Sub(start) > 400*24*time.Hour {
+		return nil, sdk.Errorf(sdk.CodeInvalidArgument, "to must be a date within 400 days after from")
+	}
+	out := []sdk.CorporateEvent{}
+	q := url.Values{"symbol": {symbol}, "from": {p.From}, "to": {p.To}}
+
+	var earnings struct {
+		Calendar []struct {
+			Date   string `json:"date"`
+			Hour   string `json:"hour"`
+			Symbol string `json:"symbol"`
+		} `json:"earningsCalendar"`
+	}
+	earningsErr := f.get(ctx, "/calendar/earnings", q, &earnings)
+	soon := time.Now().UTC().AddDate(0, 0, 7).Format("2006-01-02")
+	for _, row := range earnings.Calendar {
+		if _, err := time.Parse("2006-01-02", row.Date); err != nil || (row.Symbol != "" && !strings.EqualFold(row.Symbol, symbol)) {
+			continue
+		}
+		out = append(out, sdk.CorporateEvent{Symbol: symbol, Kind: "earnings", Date: row.Date, Confirmed: row.Hour != "" || row.Date <= soon, Provider: "FINNHUB"})
+	}
+
+	var dividends struct {
+		Data []struct {
+			Date     string  `json:"date"`
+			Amount   float64 `json:"amount"`
+			Currency string  `json:"currency"`
+		} `json:"data"`
+	}
+	dividendsErr := f.get(ctx, "/stock/dividend2", url.Values{"symbol": {symbol}}, &dividends)
+	for _, row := range dividends.Data {
+		if row.Date < p.From || row.Date > p.To {
+			continue
+		}
+		ev := sdk.CorporateEvent{Symbol: symbol, Kind: "dividend", Date: row.Date, Currency: row.Currency, Confirmed: true, Provider: "FINNHUB"}
+		if row.Amount > 0 {
+			amount := row.Amount
+			ev.Amount = &amount
+		}
+		out = append(out, ev)
+	}
+	if earningsErr != nil && dividendsErr != nil {
+		return nil, earningsErr
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Date < out[j].Date })
 	return out, nil
 }

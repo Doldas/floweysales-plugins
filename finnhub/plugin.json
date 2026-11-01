@@ -2,7 +2,7 @@
   "protocol": 1,
   "id": "finnhub",
   "name": "Finnhub",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Quotes, candles, symbol search, SEC-reported quarterly statements and allowlisted company research (profile, peers, analyst views, earnings, dividends, news) from the official Finnhub API.",
   "publisher": "FloweySales",
   "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/finnhub",
@@ -18,12 +18,13 @@
       "search",
       "financials",
       "research",
-      "news"
+      "news",
+      "events"
     ],
     "quote_kind": "ohlc_bar_close",
     "min_poll_seconds": 20,
     "cache_ttl_seconds": 60,
-    "notes": "Official Finnhub API; plan quotas, subscription and data licensing determine access/freshness. No assumed real-time.",
+    "notes": "Official Finnhub API; plan quotas, subscription and data licensing determine access/freshness. No assumed real-time. Events: earnings dates, and dividends when the plan includes them; an earnings date is confirmed when the reporting hour is known or it is within a week.",
     "research": [
       {
         "operation": "company_profile",
