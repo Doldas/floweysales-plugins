@@ -2,4 +2,4 @@ module github.com/Doldas/floweysales-plugins
 
 go 1.27.1
 
-require github.com/Doldas/floweysales/pluginsdk v0.1.1-0.20261101164638-a81db230fa18
+require github.com/Doldas/floweysales/pluginsdk v0.1.1-0.20261101201207-a2e742dde4af
