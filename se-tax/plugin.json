@@ -1,0 +1,395 @@
+{
+  "description": "A Tax tab for Swedish investors: turns Avanza or generic CSV transactions into the K4 attachment for selling shares and funds, with average cost and the 20% flat rate, a BLANKETTER.SRU file Skatteverket can import, holdings, a what-if sale planner and a tax estimate.",
+  "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/se-tax",
+  "id": "se-tax",
+  "license": "MIT",
+  "name": "Swedish tax (Skatteverket)",
+  "protocol": 1,
+  "publisher": "FloweySales",
+  "tools": {
+    "tab": {
+      "description": "Swedish capital gains tax on shares and funds: prepare the K4 attachment for your income tax return. Your files are processed in memory and are not stored.",
+      "icon": "bi-receipt",
+      "label": "Tax"
+    },
+    "tools": [
+      {
+        "description": "Upload your transactions and get every K4 row (antal, beteckning, försäljningspris, omkostnadsbelopp, vinst, förlust), the totals for boxes 7.4/8.3, a tax estimate, and BLANKETTER.SRU for Skatteverket.",
+        "id": "k4",
+        "inputs": [
+          {
+            "default": "2026",
+            "label": "Income year",
+            "name": "year",
+            "options": [
+              {
+                "label": "2025 (declared in 2026)",
+                "value": "2025"
+              },
+              {
+                "label": "2026 (declared in 2027)",
+                "value": "2026"
+              }
+            ],
+            "required": true,
+            "type": "select"
+          },
+          {
+            "accept": ".csv,.txt,.tsv",
+            "help": "Avanza's transaction export (Konto → Transaktioner → Exportera) or the generic CSV from the Guide. Include the whole history, also earlier years, so the average cost is right. The files are processed in memory and not stored.",
+            "label": "Transaction files",
+            "name": "files",
+            "required": true,
+            "type": "files"
+          },
+          {
+            "default": "auto",
+            "label": "File format",
+            "name": "format",
+            "options": [
+              {
+                "label": "Detect automatically",
+                "value": "auto"
+              },
+              {
+                "label": "Avanza transaction export",
+                "value": "avanza"
+              },
+              {
+                "label": "Generic CSV",
+                "value": "generic"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "Account numbers exactly as in the Konto column. Leave out ISK, kapitalförsäkring, IPS and pension accounts: sales there are not declared on K4. Use Review import to list the accounts.",
+            "label": "Accounts to leave out",
+            "name": "exclude_accounts",
+            "placeholder": "e.g. 1234567, 7654321",
+            "type": "text"
+          },
+          {
+            "help": "One 'ISIN-or-exact-name=type' per line. Types: aktie, aktiefond, blandfond, ranfond, krypto, onoterad. Unlisted instruments default to aktie; check the types in the result.",
+            "label": "Fix instrument types",
+            "name": "classes",
+            "placeholder": "SE0000108656=aktiefond\nSome Bond Fund=ranfond",
+            "type": "textarea"
+          },
+          {
+            "default": "best",
+            "help": "The 20% flat rate (schablonmetoden) is only used for listed shares, never for funds.",
+            "label": "Cost basis",
+            "name": "method",
+            "options": [
+              {
+                "label": "Most favourable per sale (average cost or 20% flat rate)",
+                "value": "best"
+              },
+              {
+                "label": "Average cost only (genomsnittsmetoden)",
+                "value": "average"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "Only needed to create the file for Skatteverket. It is written into the file and shown masked; it is not stored.",
+            "label": "Personal number (for the SRU file)",
+            "name": "personal_number",
+            "placeholder": "ÅÅÅÅMMDD-NNNN",
+            "type": "text"
+          },
+          {
+            "label": "Full name (for the SRU file)",
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "label": "Postal code",
+            "name": "postal_code",
+            "placeholder": "12345",
+            "type": "text"
+          },
+          {
+            "label": "Postal town",
+            "name": "city",
+            "type": "text"
+          },
+          {
+            "help": "Interest and dividends minus interest costs for the year, only used for the tax estimate.",
+            "label": "Other capital income, SEK (optional)",
+            "name": "other_income",
+            "type": "number"
+          }
+        ],
+        "label": "K4 report",
+        "submit": "Calculate K4"
+      },
+      {
+        "description": "Your remaining holdings with total and average cost per unit (genomsnittligt omkostnadsbelopp). Exports an opening-balance file so next year you do not need the old history.",
+        "id": "holdings",
+        "inputs": [
+          {
+            "accept": ".csv,.txt,.tsv",
+            "help": "Avanza's transaction export (Konto → Transaktioner → Exportera) or the generic CSV from the Guide. Include the whole history, also earlier years, so the average cost is right. The files are processed in memory and not stored.",
+            "label": "Transaction files",
+            "name": "files",
+            "required": true,
+            "type": "files"
+          },
+          {
+            "default": "auto",
+            "label": "File format",
+            "name": "format",
+            "options": [
+              {
+                "label": "Detect automatically",
+                "value": "auto"
+              },
+              {
+                "label": "Avanza transaction export",
+                "value": "avanza"
+              },
+              {
+                "label": "Generic CSV",
+                "value": "generic"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "Account numbers exactly as in the Konto column. Leave out ISK, kapitalförsäkring, IPS and pension accounts: sales there are not declared on K4. Use Review import to list the accounts.",
+            "label": "Accounts to leave out",
+            "name": "exclude_accounts",
+            "placeholder": "e.g. 1234567, 7654321",
+            "type": "text"
+          },
+          {
+            "help": "One 'ISIN-or-exact-name=type' per line. Types: aktie, aktiefond, blandfond, ranfond, krypto, onoterad. Unlisted instruments default to aktie; check the types in the result.",
+            "label": "Fix instrument types",
+            "name": "classes",
+            "placeholder": "SE0000108656=aktiefond\nSome Bond Fund=ranfond",
+            "type": "textarea"
+          },
+          {
+            "help": "Defaults to today. Use 31 December for the year-end position.",
+            "label": "As of date",
+            "name": "as_of",
+            "type": "date"
+          }
+        ],
+        "label": "Holdings \u0026 cost basis",
+        "submit": "Show holdings"
+      },
+      {
+        "description": "Try selling before year-end: see the cost basis, the gain and how much the year's tax changes, including the effect of losses.",
+        "id": "planner",
+        "inputs": [
+          {
+            "default": "2026",
+            "label": "Income year",
+            "name": "year",
+            "options": [
+              {
+                "label": "2025 (declared in 2026)",
+                "value": "2025"
+              },
+              {
+                "label": "2026 (declared in 2027)",
+                "value": "2026"
+              }
+            ],
+            "required": true,
+            "type": "select"
+          },
+          {
+            "accept": ".csv,.txt,.tsv",
+            "help": "Avanza's transaction export (Konto → Transaktioner → Exportera) or the generic CSV from the Guide. Include the whole history, also earlier years, so the average cost is right. The files are processed in memory and not stored.",
+            "label": "Transaction files",
+            "name": "files",
+            "required": true,
+            "type": "files"
+          },
+          {
+            "default": "auto",
+            "label": "File format",
+            "name": "format",
+            "options": [
+              {
+                "label": "Detect automatically",
+                "value": "auto"
+              },
+              {
+                "label": "Avanza transaction export",
+                "value": "avanza"
+              },
+              {
+                "label": "Generic CSV",
+                "value": "generic"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "Account numbers exactly as in the Konto column. Leave out ISK, kapitalförsäkring, IPS and pension accounts: sales there are not declared on K4. Use Review import to list the accounts.",
+            "label": "Accounts to leave out",
+            "name": "exclude_accounts",
+            "placeholder": "e.g. 1234567, 7654321",
+            "type": "text"
+          },
+          {
+            "help": "One 'ISIN-or-exact-name=type' per line. Types: aktie, aktiefond, blandfond, ranfond, krypto, onoterad. Unlisted instruments default to aktie; check the types in the result.",
+            "label": "Fix instrument types",
+            "name": "classes",
+            "placeholder": "SE0000108656=aktiefond\nSome Bond Fund=ranfond",
+            "type": "textarea"
+          },
+          {
+            "default": "best",
+            "help": "The 20% flat rate (schablonmetoden) is only used for listed shares, never for funds.",
+            "label": "Cost basis",
+            "name": "method",
+            "options": [
+              {
+                "label": "Most favourable per sale (average cost or 20% flat rate)",
+                "value": "best"
+              },
+              {
+                "label": "Average cost only (genomsnittsmetoden)",
+                "value": "average"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "One per line: name or ISIN; quantity; price per unit in SEK; fee in SEK (optional).",
+            "label": "Planned sales",
+            "name": "planned",
+            "placeholder": "Volvo B; 50; 245.50; 39\nSE0000115446; 10; 250",
+            "required": true,
+            "type": "textarea"
+          },
+          {
+            "help": "Interest and dividends minus interest costs, for the estimate.",
+            "label": "Other capital income, SEK (optional)",
+            "name": "other_income",
+            "type": "number"
+          }
+        ],
+        "label": "What if I sell?",
+        "submit": "Compare"
+      },
+      {
+        "description": "A quick calculator from totals: the 30% tax, the 70% rule for losses and the tax reduction on a deficit.",
+        "id": "estimate",
+        "inputs": [
+          {
+            "label": "Gains on listed shares and equity/mixed funds, SEK",
+            "name": "gain_listed",
+            "type": "number"
+          },
+          {
+            "help": "Offset gains in full.",
+            "label": "Losses on listed shares and equity/mixed funds, SEK",
+            "name": "loss_listed",
+            "type": "number"
+          },
+          {
+            "label": "Gains on unlisted shares and bond funds, SEK",
+            "name": "gain_unlisted",
+            "type": "number"
+          },
+          {
+            "help": "Count at 70%.",
+            "label": "Losses on bond funds, SEK",
+            "name": "loss_interest_funds",
+            "type": "number"
+          },
+          {
+            "help": "Count at 70%.",
+            "label": "Losses on unlisted shares, SEK",
+            "name": "loss_unlisted",
+            "type": "number"
+          },
+          {
+            "label": "Gains on crypto, SEK",
+            "name": "gain_crypto",
+            "type": "number"
+          },
+          {
+            "help": "Count at 70%.",
+            "label": "Losses on crypto, SEK",
+            "name": "loss_crypto",
+            "type": "number"
+          },
+          {
+            "help": "Interest and dividends minus interest costs; may be negative.",
+            "label": "Other capital income, SEK",
+            "name": "other_income",
+            "type": "number"
+          }
+        ],
+        "label": "Tax estimate",
+        "submit": "Estimate"
+      },
+      {
+        "description": "Check what was read from your files: accounts (so you can leave out ISK and pension accounts), transaction types and the type guessed for each instrument.",
+        "id": "review",
+        "inputs": [
+          {
+            "accept": ".csv,.txt,.tsv",
+            "help": "Avanza's transaction export (Konto → Transaktioner → Exportera) or the generic CSV from the Guide. Include the whole history, also earlier years, so the average cost is right. The files are processed in memory and not stored.",
+            "label": "Transaction files",
+            "name": "files",
+            "required": true,
+            "type": "files"
+          },
+          {
+            "default": "auto",
+            "label": "File format",
+            "name": "format",
+            "options": [
+              {
+                "label": "Detect automatically",
+                "value": "auto"
+              },
+              {
+                "label": "Avanza transaction export",
+                "value": "avanza"
+              },
+              {
+                "label": "Generic CSV",
+                "value": "generic"
+              }
+            ],
+            "type": "select"
+          },
+          {
+            "help": "Account numbers exactly as in the Konto column. Leave out ISK, kapitalförsäkring, IPS and pension accounts: sales there are not declared on K4. Use Review import to list the accounts.",
+            "label": "Accounts to leave out",
+            "name": "exclude_accounts",
+            "placeholder": "e.g. 1234567, 7654321",
+            "type": "text"
+          },
+          {
+            "help": "One 'ISIN-or-exact-name=type' per line. Types: aktie, aktiefond, blandfond, ranfond, krypto, onoterad. Unlisted instruments default to aktie; check the types in the result.",
+            "label": "Fix instrument types",
+            "name": "classes",
+            "placeholder": "SE0000108656=aktiefond\nSome Bond Fund=ranfond",
+            "type": "textarea"
+          }
+        ],
+        "label": "Review import",
+        "submit": "Review files"
+      },
+      {
+        "description": "How K4 works, the rules this plugin applies, what it does not cover, and a CSV template for other brokers.",
+        "id": "guide",
+        "label": "Guide \u0026 rules",
+        "submit": "Show guide"
+      }
+    ]
+  },
+  "version": "1.0.0"
+}
