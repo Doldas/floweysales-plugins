@@ -17,7 +17,8 @@ func TestPluginJSONMatchesGoManifest(t *testing.T) {
 		var doc map[string]any
 		full, _ := json.Marshal(want)
 		_ = json.Unmarshal(full, &doc)
-		delete(doc, "provider") // a tools-only plugin has no provider
+		// Only the tool capabilities are declared; there is no market-data provider.
+		doc["provider"] = map[string]any{"capabilities": want.Provider.Capabilities}
 		raw, _ := json.MarshalIndent(doc, "", "  ")
 		if err := os.WriteFile("plugin.json", append(raw, '\n'), 0o644); err != nil {
 			t.Fatal(err)

@@ -15,9 +15,11 @@ func buildManifest() sdk.Manifest {
 		return sdk.ToolInput{Name: name, Label: label, Type: sdk.InputNumber, Help: help}
 	}
 	return sdk.Manifest{
-		Protocol: sdk.ProtocolVersion, ID: "se-tax", Name: "Swedish tax (Skatteverket)", Version: "1.0.0",
+		Protocol: sdk.ProtocolVersion, ID: "se-tax", Name: "Swedish tax (Skatteverket)", Version: "1.1.0",
 		Description: "A Tax tab for Swedish investors: turns Avanza or generic CSV transactions into the K4 attachment for selling shares and funds, with average cost and the 20% flat rate, an Excel export, holdings, a what-if sale planner and a tax estimate.",
 		Publisher:   "FloweySales", Homepage: "https://github.com/Doldas/floweysales-plugins/tree/master/se-tax", License: "MIT",
+		// A tool capability, not a market-data one: the plugin stays out of the providers.
+		Provider: sdk.ProviderInfo{Capabilities: []string{sdk.CapTax}},
 		Tools: &sdk.ToolsInfo{
 			Tab: sdk.ToolsTab{Label: "Tax", Icon: "bi-receipt",
 				Description: "Swedish capital gains tax on shares and funds: fill in the K4 attachment for your income tax return, or export it to Excel. Your files are processed in memory and are not stored."},
