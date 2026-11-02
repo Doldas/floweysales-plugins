@@ -8,7 +8,7 @@ import (
 	sdk "github.com/Doldas/floweysales/pluginsdk"
 )
 
-var official = []string{"yahoo", "binance", "finnhub", "avanza", "fred", "ecb", "coingecko", "stooq"}
+var official = []string{"yahoo", "binance", "finnhub", "avanza", "fred", "ecb", "coingecko", "stooq", "se-tax"}
 
 func TestManifestsMatchDirectoriesAndPolicy(t *testing.T) {
 	providers := map[string]string{}
@@ -23,6 +23,12 @@ func TestManifestsMatchDirectoriesAndPolicy(t *testing.T) {
 		}
 		if m.ID != dir {
 			t.Errorf("%s/plugin.json declares id %q", dir, m.ID)
+		}
+		if m.Provider.ID == "" {
+			if m.Tools == nil {
+				t.Errorf("%s provides neither market data nor tools", dir)
+			}
+			continue
 		}
 		if other, dup := providers[m.Provider.ID]; dup {
 			t.Errorf("%s and %s both provide %s", dir, other, m.Provider.ID)

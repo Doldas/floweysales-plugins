@@ -1,6 +1,6 @@
 # FloweySales plugins
 
-The official market-data, news, macro and FX provider plugins for
+The official market-data, news, macro and FX provider plugins, and the Swedish tax tools plugin, for
 [FloweySales](https://github.com/Doldas/floweysales), published to the plugin
 store at **https://doldas.github.io/floweysales-plugins/index.json** (the
 backend's default `PLUGIN_STORE_URL`).
@@ -15,6 +15,7 @@ backend's default `PLUGIN_STORE_URL`).
 | [`coingecko`](coingecko/plugin.json) | `COINGECKO` | CoinGecko public API (official) | quote, history, search | Symbols are coin IDs (`bitcoin`, `ethereum`); prices in USD, history is a price line (o=h=l=c) limited to one year; optional `COINGECKO_API_KEY` demo key |
 | [`stooq`](stooq/plugin.json) | `STOOQ` | Stooq daily CSV (unofficial) | quote, history | A fallback when Yahoo is rate limited: US tickers and a few indices only; install terms must be accepted |
 | [`ecb`](ecb/plugin.json) | `ECB` | European Central Bank data API (official) | quote, history, search | Euro reference rates and derived crosses (`EURUSD`, `USDSEK`); no key |
+| [`se-tax`](se-tax/plugin.json) | – (adds a **Tax** tab) | Your own transaction exports (Avanza CSV, generic CSV); rules from Skatteverket | tools | K4 report for selling shares and funds, cost basis, a fill-in guide, Excel export, holdings, what-if planner and tax estimate; no network access, nothing stored. See [se-tax/README.md](se-tax/README.md) |
 
 Each plugin's `plugin.json` is authoritative for its research operations,
 poll interval and settings.
