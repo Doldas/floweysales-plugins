@@ -73,3 +73,27 @@ func TestDomainRefusesBadInput(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitFilesReadsTheBackendsMultiFileInput(t *testing.T) {
+	files := splitFiles("=== file: a.csv ===\nline1\nline2\n=== file: b 2025.csv ===\r\nx\n")
+	if len(files) != 2 || files[0].Name != "a.csv" || files[0].Content != "line1\nline2\n" || files[1].Name != "b 2025.csv" || files[1].Content != "x\n" {
+		t.Fatalf("files = %+v", files)
+	}
+	if one := splitFiles("date;type\n1;2\n"); len(one) != 1 || one[0].Name != "transactions.csv" || one[0].Content != "date;type\n1;2\n" {
+		t.Fatalf("plain text is one file: %+v", one)
+	}
+	if len(splitFiles("  \n")) != 0 {
+		t.Fatal("blank input has no files")
+	}
+}
+
+func TestDomainReportFromSavedFilesFormat(t *testing.T) {
+	joined := "=== file: avanza.csv ===\n" + e2eCSV
+	out, err := callDomain(t, sdk.CapTaxReport, map[string]any{"year": 2026, "csv": joined, "exclude_accounts": "9999999"})
+	if err != nil || out["securities_sold"] != float64(2) {
+		t.Fatalf("out=%v err=%v", out, err)
+	}
+	if _, err := callDomain(t, sdk.CapTaxReport, map[string]any{"year": 2026}); err == nil || !strings.Contains(err.Error(), "Saved transactions") {
+		t.Fatalf("with nothing saved the error must say how to supply data: %v", err)
+	}
+}

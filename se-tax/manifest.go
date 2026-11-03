@@ -15,7 +15,7 @@ func buildManifest() sdk.Manifest {
 		return sdk.ToolInput{Name: name, Label: label, Type: sdk.InputNumber, Help: help}
 	}
 	return sdk.Manifest{
-		Protocol: sdk.ProtocolVersion, ID: "se-tax", Name: "Swedish tax (Skatteverket)", Version: "1.1.0",
+		Protocol: sdk.ProtocolVersion, ID: "se-tax", Name: "Swedish tax (Skatteverket)", Version: "1.2.0",
 		Description: "A Tax tab for Swedish investors: turns Avanza or generic CSV transactions into the K4 attachment for selling shares and funds, with average cost and the 20% flat rate, an Excel export, holdings, a what-if sale planner and a tax estimate.",
 		Publisher:   "FloweySales", Homepage: "https://github.com/Doldas/floweysales-plugins/tree/master/se-tax", License: "MIT",
 		// A tax domain provider: the same calculations as the Tax tab, for the app and the AI agent.
@@ -75,7 +75,8 @@ func buildManifest() sdk.Manifest {
 // transactionFields are the inputs shared by the operations that read transactions.
 func transactionFields() []sdk.DomainField {
 	return []sdk.DomainField{
-		{Name: "csv", Type: sdk.FieldString, Required: true, Description: "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV. Include earlier years so the average cost is right. Never invent transactions."},
+		{Name: "csv", Type: sdk.FieldString, Source: sdk.SourceUserTransactions,
+			Description: "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV, earlier years included so the average cost is right. Leave it out to use the user's saved transaction files. Never invent transactions."},
 		{Name: "format", Type: sdk.FieldString, Description: "File format, default auto", Enum: []string{"auto", "avanza", "generic"}},
 		{Name: "exclude_accounts", Type: sdk.FieldString, Description: "Account numbers to leave out, comma separated (ISK, kapitalförsäkring, IPS and pension accounts are not declared on K4)"},
 		{Name: "classes", Type: sdk.FieldString, Description: "Instrument type overrides, one 'ISIN-or-name=type' per line (aktie, aktiefond, blandfond, ranfond, krypto, onoterad)"},
