@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"strings"
 
 	sdk "github.com/Doldas/floweysales/pluginsdk"
 )
@@ -39,10 +40,43 @@ type transactionInput struct {
 }
 
 func (in transactionInput) load() (*loaded, error) {
-	if in.CSV == "" {
-		return nil, invalid("csv is required: the transactions as CSV text")
+	files := splitFiles(in.CSV)
+	if len(files) == 0 {
+		return nil, invalid("no transactions given: save your broker export under Tax → Saved transactions, or pass it as csv")
 	}
-	return loadFiles([]InputFile{{Name: "transactions.csv", Content: in.CSV}}, in.Format, in.ExcludeAccounts, in.Classes, in.Method)
+	return loadFiles(files, in.Format, in.ExcludeAccounts, in.Classes, in.Method)
+}
+
+// splitFiles reads a csv input that may hold several files, each introduced by
+// a "=== file: NAME ===" line (how the backend joins saved files). Text
+// without such a line is one file.
+func splitFiles(csv string) []InputFile {
+	if strings.TrimSpace(csv) == "" {
+		return nil
+	}
+	var files []InputFile
+	var cur *InputFile
+	var body strings.Builder
+	flush := func() {
+		if cur != nil {
+			cur.Content = body.String()
+			files = append(files, *cur)
+			body.Reset()
+		}
+	}
+	for _, line := range strings.SplitAfter(csv, "\n") {
+		if name, ok := strings.CutPrefix(strings.TrimRight(line, "\r\n"), sdk.DomainFileMarker); ok && strings.HasSuffix(name, " ===") {
+			flush()
+			cur = &InputFile{Name: strings.TrimSuffix(name, " ===")}
+			continue
+		}
+		if cur == nil {
+			cur = &InputFile{Name: "transactions.csv"}
+		}
+		body.WriteString(line)
+	}
+	flush()
+	return files
 }
 
 func decodeInput[T any](raw json.RawMessage) (T, error) {

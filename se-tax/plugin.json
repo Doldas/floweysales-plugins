@@ -30,9 +30,9 @@
             "type": "integer"
           },
           {
-            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV. Include earlier years so the average cost is right. Never invent transactions.",
+            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV, earlier years included so the average cost is right. Leave it out to use the user's saved transaction files. Never invent transactions.",
             "name": "csv",
-            "required": true,
+            "source": "user_transactions",
             "type": "string"
           },
           {
@@ -81,9 +81,9 @@
             "type": "string"
           },
           {
-            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV. Include earlier years so the average cost is right. Never invent transactions.",
+            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV, earlier years included so the average cost is right. Leave it out to use the user's saved transaction files. Never invent transactions.",
             "name": "csv",
-            "required": true,
+            "source": "user_transactions",
             "type": "string"
           },
           {
@@ -530,5 +530,5 @@
       }
     ]
   },
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
