@@ -6,9 +6,166 @@
   "name": "Swedish tax (Skatteverket)",
   "protocol": 1,
   "provider": {
+    "cache_ttl_seconds": 0,
     "capabilities": [
-      "tax"
-    ]
+      "tax_report",
+      "tax_holdings",
+      "tax_estimate"
+    ],
+    "experimental": false,
+    "id": "SE_TAX",
+    "label": "Swedish tax (Skatteverket)",
+    "min_poll_seconds": 0,
+    "notes": "Calculations from transactions you supply (Avanza export or generic CSV); nothing is stored. Not tax advice.",
+    "official_api": false,
+    "operations": [
+      {
+        "capability": "tax_report",
+        "description": "Sales of an income year per security with cost basis (genomsnittsmetoden or the 20% flat rate), K4 section totals and a simplified tax estimate.",
+        "inputs": [
+          {
+            "description": "Income year, 2025 or 2026",
+            "name": "year",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV. Include earlier years so the average cost is right. Never invent transactions.",
+            "name": "csv",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "File format, default auto",
+            "enum": [
+              "auto",
+              "avanza",
+              "generic"
+            ],
+            "name": "format",
+            "type": "string"
+          },
+          {
+            "description": "Account numbers to leave out, comma separated (ISK, kapitalförsäkring, IPS and pension accounts are not declared on K4)",
+            "name": "exclude_accounts",
+            "type": "string"
+          },
+          {
+            "description": "Instrument type overrides, one 'ISIN-or-name=type' per line (aktie, aktiefond, blandfond, ranfond, krypto, onoterad)",
+            "name": "classes",
+            "type": "string"
+          },
+          {
+            "description": "Cost basis: best (default) or average only",
+            "enum": [
+              "best",
+              "average"
+            ],
+            "name": "method",
+            "type": "string"
+          },
+          {
+            "description": "Other capital income in SEK for the estimate (interest and dividends minus interest costs)",
+            "name": "other_income",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "capability": "tax_holdings",
+        "description": "What is held at a date, with total and average cost per unit.",
+        "inputs": [
+          {
+            "description": "Date YYYY-MM-DD; default today",
+            "name": "as_of",
+            "type": "string"
+          },
+          {
+            "description": "The whole transaction history as CSV text: Avanza's transaction export or the generic CSV. Include earlier years so the average cost is right. Never invent transactions.",
+            "name": "csv",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "File format, default auto",
+            "enum": [
+              "auto",
+              "avanza",
+              "generic"
+            ],
+            "name": "format",
+            "type": "string"
+          },
+          {
+            "description": "Account numbers to leave out, comma separated (ISK, kapitalförsäkring, IPS and pension accounts are not declared on K4)",
+            "name": "exclude_accounts",
+            "type": "string"
+          },
+          {
+            "description": "Instrument type overrides, one 'ISIN-or-name=type' per line (aktie, aktiefond, blandfond, ranfond, krypto, onoterad)",
+            "name": "classes",
+            "type": "string"
+          },
+          {
+            "description": "Cost basis: best (default) or average only",
+            "enum": [
+              "best",
+              "average"
+            ],
+            "name": "method",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "capability": "tax_estimate",
+        "description": "Tax on gains and losses you already know: losses on listed shares offset gains in full, other losses count at 70%, tax is 30%, a deficit gives a tax reduction.",
+        "inputs": [
+          {
+            "description": "Gains on listed shares and equity/mixed funds, SEK",
+            "name": "gain_listed",
+            "type": "number"
+          },
+          {
+            "description": "Losses on listed shares and equity/mixed funds, SEK",
+            "name": "loss_listed",
+            "type": "number"
+          },
+          {
+            "description": "Gains on unlisted shares and bond funds, SEK",
+            "name": "gain_unlisted",
+            "type": "number"
+          },
+          {
+            "description": "Losses on bond funds, SEK (count at 70%)",
+            "name": "loss_interest_funds",
+            "type": "number"
+          },
+          {
+            "description": "Losses on unlisted shares, SEK (count at 70%)",
+            "name": "loss_unlisted",
+            "type": "number"
+          },
+          {
+            "description": "Gains on crypto, SEK",
+            "name": "gain_crypto",
+            "type": "number"
+          },
+          {
+            "description": "Losses on crypto, SEK (count at 70%)",
+            "name": "loss_crypto",
+            "type": "number"
+          },
+          {
+            "description": "Other capital income, SEK; may be negative",
+            "name": "other_income",
+            "type": "number"
+          }
+        ]
+      }
+    ],
+    "quote_kind": "",
+    "type": "tax"
   },
   "publisher": "FloweySales",
   "tools": {
