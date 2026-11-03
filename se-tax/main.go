@@ -22,5 +22,5 @@ func newPlugin(t *taxPlugin) sdk.Plugin {
 	if err != nil {
 		panic(err)
 	}
-	return sdk.Plugin{Manifest: manifest, Tool: t.tool}
+	return sdk.Plugin{Manifest: manifest, Tool: t.tool, Domain: t.domain}
 }

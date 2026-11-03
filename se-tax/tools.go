@@ -142,7 +142,7 @@ type loaded struct {
 	opts   Options
 }
 
-// load reads the shared inputs and replays the transactions.
+// load reads the shared inputs of a tool call and replays the transactions.
 func load(p sdk.ToolParams) (*loaded, error) {
 	files := p.Files("files")
 	if len(files) == 0 {
@@ -152,17 +152,23 @@ func load(p sdk.ToolParams) (*loaded, error) {
 	for i, f := range files {
 		in[i] = InputFile{Name: f.Name, Content: f.Content}
 	}
+	return loadFiles(in, p.String("format"), p.String("exclude_accounts"), p.String("classes"), p.String("method"))
+}
+
+// loadFiles imports the files and replays the transactions. It is shared by
+// the tools tab and the domain operations.
+func loadFiles(in []InputFile, format, excludeAccounts, classes, method string) (*loaded, error) {
 	excluded := map[string]bool{}
-	for _, a := range strings.FieldsFunc(p.String("exclude_accounts"), func(r rune) bool { return r == ',' || r == ';' || r == '\n' }) {
+	for _, a := range strings.FieldsFunc(excludeAccounts, func(r rune) bool { return r == ',' || r == ';' || r == '\n' }) {
 		if a = strings.ToLower(strings.TrimSpace(a)); a != "" {
 			excluded[a] = true
 		}
 	}
-	overrides, problems := ParseOverrides(p.String("classes"))
+	overrides, problems := ParseOverrides(classes)
 	if len(problems) > 0 {
 		return nil, invalid("%s", strings.Join(problems, "; "))
 	}
-	txs, report, err := Import(in, p.String("format"), excluded)
+	txs, report, err := Import(in, format, excluded)
 	if err != nil {
 		return nil, invalid("%v", err)
 	}
@@ -170,7 +176,7 @@ func load(p sdk.ToolParams) (*loaded, error) {
 		return nil, invalid("no buys or sells were found in the files (%d rows read). Use Review import to see what the files contain", report.Rows)
 	}
 	opts := Options{Method: BestMethod, Overrides: overrides}
-	if p.String("method") == "average" {
+	if method == "average" {
 		opts.Method = AverageOnly
 	}
 	return &loaded{txs: txs, report: report, result: Replay(txs, opts), opts: opts}, nil

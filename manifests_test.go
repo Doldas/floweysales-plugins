@@ -34,6 +34,10 @@ func TestManifestsMatchDirectoriesAndPolicy(t *testing.T) {
 			t.Errorf("%s and %s both provide %s", dir, other, m.Provider.ID)
 		}
 		providers[m.Provider.ID] = dir
+		if m.Provider.IsDomain() {
+			// Domain providers (tax, ...) are not polled and use no upstream endpoints.
+			continue
+		}
 		if m.Provider.MinPollSeconds < 2 {
 			t.Errorf("%s polls faster than 2s", dir)
 		}
