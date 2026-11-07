@@ -4,8 +4,7 @@ package main
 import (
 	"context"
 	_ "embed"
-	"net/http"
-	"net/url"
+	"time"
 
 	"github.com/Doldas/floweysales-plugins/internal/yahooapi"
 	sdk "github.com/Doldas/floweysales/pluginsdk"
@@ -51,12 +50,21 @@ func newPlugin(api *yahooapi.API) sdk.Plugin {
 			if err != nil {
 				return sdk.ResearchResult{}, err
 			}
-			// market_news is the only operation: a news-only search for the ticker.
-			news := url.Values{"q": {q.Get("symbol")}, "quotesCount": {"0"}, "newsCount": {"8"}}
-			data, err := research.FetchJSON(ctx, http.DefaultClient, "YAHOO", api.Base+op.Path+"?"+news.Encode(), nil)
+			// market_news is the only operation: the same dated headlines as the news method.
+			items, err := api.News(ctx, q.Get("symbol"), 8)
 			if err != nil {
 				return sdk.ResearchResult{}, err
 			}
+			rows := []map[string]any{}
+			for _, it := range items {
+				row := map[string]any{"title": it.Title, "url": it.URL, "source": it.Source, "date_status": "unavailable"}
+				if it.Published > 0 {
+					row["published"] = time.Unix(it.Published, 0).UTC().Format(time.RFC3339)
+					row["date_status"] = "published"
+				}
+				rows = append(rows, row)
+			}
+			data := map[string]any{"news": rows}
 			return research.Result("YAHOO", op, p.Symbol, yahooapi.DefaultBase+op.Path, data, ""), nil
 		},
 	}

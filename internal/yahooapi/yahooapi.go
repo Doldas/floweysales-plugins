@@ -13,6 +13,7 @@ import (
 	"time"
 
 	sdk "github.com/Doldas/floweysales/pluginsdk"
+	"github.com/Doldas/floweysales/pluginsdk/feed"
 	"github.com/Doldas/floweysales/pluginsdk/httpx"
 )
 
@@ -23,11 +24,17 @@ const DefaultBase = "https://query1.finance.yahoo.com"
 type API struct {
 	HTTP *httpx.Client
 	Base string
+	// FeedBase is Yahoo's headline RSS host. Empty disables the feed fallback,
+	// which hermetic tests rely on.
+	FeedBase string
 }
+
+// DefaultFeedBase is Yahoo's public headline feed host.
+const DefaultFeedBase = "https://feeds.finance.yahoo.com"
 
 // New returns a client for the public host.
 func New() *API {
-	return &API{HTTP: httpx.New("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", 0), Base: DefaultBase}
+	return &API{HTTP: httpx.New("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", 0), Base: DefaultBase, FeedBase: DefaultFeedBase}
 }
 
 func (a *API) get(ctx context.Context, path string) (map[string]any, error) {
@@ -283,7 +290,82 @@ func (a *API) News(ctx context.Context, symbol string, limit int) ([]sdk.NewsIte
 	if err != nil {
 		return nil, err
 	}
-	return ParseNews(parsed, symbol), nil
+	items := ParseNews(parsed, symbol)
+	undated := len(items) == 0
+	for _, it := range items {
+		undated = undated || it.Published == 0
+	}
+	if !undated || a.FeedBase == "" {
+		return items, nil
+	}
+	// Yahoo's search leaves out the publication time for some headlines and
+	// returns no news at all for many non-US tickers. The headline RSS feed
+	// carries a pubDate for every item, so it fills the dates and the gaps.
+	body, ferr := a.HTTP.Get(ctx, a.FeedBase+"/rss/2.0/headline?s="+url.QueryEscape(symbol)+"&region=US&lang=en-US", nil)
+	if ferr != nil {
+		return items, nil // The search result stands; missing dates stay missing.
+	}
+	entries, perr := feed.Parse(body, 0)
+	if perr != nil {
+		return items, nil
+	}
+	return mergeFeed(items, feed.NewsItems(entries, symbol, "YAHOO", 0), limit), nil
+}
+
+// mergeFeed dates the search items from the feed and appends feed items the
+// search did not have, up to limit. Items match on link or on title.
+func mergeFeed(search, rss []sdk.NewsItem, limit int) []sdk.NewsItem {
+	key := func(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
+	link := func(u string) string {
+		u, _, _ = strings.Cut(u, "?")
+		return strings.TrimRight(u, "/")
+	}
+	dates := map[string]int64{}
+	for _, r := range rss {
+		if r.Published > 0 {
+			dates["t:"+key(r.Title)] = r.Published
+			dates["l:"+link(r.URL)] = r.Published
+		}
+	}
+	seen := map[string]bool{}
+	out := make([]sdk.NewsItem, 0, limit)
+	for _, it := range search {
+		if it.Published == 0 {
+			if d, ok := dates["l:"+link(it.URL)]; ok {
+				it.Published = d
+			} else if d, ok := dates["t:"+key(it.Title)]; ok {
+				it.Published = d
+			}
+		}
+		seen[key(it.Title)] = true
+		out = append(out, it)
+	}
+	for _, it := range rss {
+		if len(out) >= limit {
+			break
+		}
+		if !seen[key(it.Title)] {
+			seen[key(it.Title)] = true
+			out = append(out, it)
+		}
+	}
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+// publishTime reads Yahoo's providerPublishTime, which is unix seconds but
+// has also been seen in milliseconds. Zero means the date is unknown.
+func publishTime(v any) int64 {
+	t, ok := v.(float64)
+	if !ok || t <= 0 {
+		return 0
+	}
+	if t > 1e11 {
+		t /= 1000
+	}
+	return int64(t)
 }
 
 // ParseNews maps the search response's news array to news items.
@@ -301,11 +383,7 @@ func ParseNews(parsed map[string]any, symbol string) []sdk.NewsItem {
 			continue
 		}
 		publisher, _ := item["publisher"].(string)
-		published := int64(0)
-		if t, ok := item["providerPublishTime"].(float64); ok && t > 0 {
-			published = int64(t)
-		}
-		out = append(out, sdk.NewsItem{Title: title, URL: link, Source: publisher, Published: published, Symbol: symbol, Provider: "YAHOO"})
+		out = append(out, sdk.NewsItem{Title: title, URL: link, Source: publisher, Published: publishTime(item["providerPublishTime"]), Symbol: symbol, Provider: "YAHOO"})
 	}
 	return out
 }
