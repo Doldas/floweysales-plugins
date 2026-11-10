@@ -75,3 +75,20 @@ func TestKeyNeverLeaksAndIsRequired(t *testing.T) {
 func TestConformance(t *testing.T) {
 	plugintest.Conformance(t, newPlugin(&fred{http: httpx.New("test", 0), base: defaultBase, now: time.Now}))
 }
+
+// FloweySales reads its macro regime through history under these FRED ids
+// when a provider declares the macro capability (docs/plugins.md).
+func TestServesTheMacroSeries(t *testing.T) {
+	srv := testServer(t)
+	defer srv.Close()
+	p := newPlugin(&fred{http: httpx.New("test", 0), base: srv.URL, key: "k", now: func() time.Time { return time.Date(2026, 10, 31, 0, 0, 0, 0, time.UTC) }})
+	if !p.Manifest.Provider.HasCapability(sdk.CapMacro) {
+		t.Fatal("the manifest must declare the macro capability")
+	}
+	for _, id := range []string{"T10Y2Y", "UNRATE", "FEDFUNDS", "BAMLH0A0HYM2", "VIXCLS"} {
+		series, err := p.History(context.Background(), sdk.HistoryParams{Symbol: id, Range: "5Y"})
+		if err != nil || len(series.Points) == 0 || series.Symbol != id {
+			t.Errorf("%s: %+v %v", id, series, err)
+		}
+	}
+}
