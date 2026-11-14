@@ -2,7 +2,7 @@
   "protocol": 1,
   "id": "avanza",
   "name": "Avanza (unofficial)",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Swedish fund and stock snapshots, price charts, search, forum posts and quarterly statements via Avanza's public web endpoints. Experimental and unofficial.",
   "publisher": "FloweySales",
   "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/avanza",
@@ -21,6 +21,7 @@
       "research",
       "forum"
     ],
+    "markets": ["SE"],
     "quote_kind": "ohlc_bar_close",
     "min_poll_seconds": 10,
     "cache_ttl_seconds": 60,
