@@ -48,3 +48,11 @@ func TestHistoryFallsBackToLabelledYahoo(t *testing.T) {
 func TestConformance(t *testing.T) {
 	plugintest.Conformance(t, newPlugin(&avanza{http: httpx.New("test", 0), base: "https://invalid.test", yahoo: yahooapi.New()}))
 }
+
+// FloweySales warns when Avanza is chosen for a market it does not list.
+func TestStatesItsMarkets(t *testing.T) {
+	p := newPlugin(&avanza{http: httpx.New("test", 0), base: "https://invalid.test", yahoo: yahooapi.New()})
+	if got := strings.Join(p.Manifest.Provider.Markets, ","); got != "SE" {
+		t.Fatalf("markets = %q, want SE", got)
+	}
+}

@@ -87,3 +87,11 @@ func TestParseCSVRejectsOtherBodies(t *testing.T) {
 func TestConformance(t *testing.T) {
 	plugintest.Conformance(t, newPlugin(&stooq{http: httpx.New("test", 0), base: "https://invalid.test"}))
 }
+
+// FloweySales warns when Stooq is chosen for a market it does not list.
+func TestStatesItsMarkets(t *testing.T) {
+	p := newPlugin(&stooq{http: httpx.New("test", 0), base: "https://invalid.test"})
+	if got := strings.Join(p.Manifest.Provider.Markets, ","); got != "US" {
+		t.Fatalf("markets = %q, want US", got)
+	}
+}
