@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/url"
 	"os"
 	"regexp"
@@ -49,6 +50,9 @@ func newPlugin(c *coingecko) sdk.Plugin {
 		},
 		Search: func(ctx context.Context, p sdk.SearchParams) ([]sdk.SearchResult, error) {
 			return c.search(ctx, p.Query)
+		},
+		Profile: func(ctx context.Context, p sdk.ProfileParams) (sdk.InstrumentProfile, error) {
+			return c.profile(ctx, p.Symbol)
 		},
 	}
 }
@@ -194,4 +198,83 @@ func (c *coingecko) search(ctx context.Context, query string) ([]sdk.SearchResul
 		}
 	}
 	return out, nil
+}
+
+// coinDetail is the part of /api/v3/coins/{id} a profile uses.
+type coinDetail struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	AssetPlatform *string  `json:"asset_platform_id"`
+	Categories    []string `json:"categories"`
+	Description   struct {
+		EN string `json:"en"`
+	} `json:"description"`
+	Links struct {
+		Homepage []string `json:"homepage"`
+	} `json:"links"`
+	GenesisDate *string `json:"genesis_date"`
+	MarketData  struct {
+		CirculatingSupply *float64 `json:"circulating_supply"`
+		MaxSupply         *float64 `json:"max_supply"`
+	} `json:"market_data"`
+	LastUpdated string `json:"last_updated"`
+}
+
+var htmlTag = regexp.MustCompile(`<[^>]*>`)
+
+// profile states what CoinGecko says about a coin. The network is the asset
+// platform a token is issued on; a native coin has none, so it stays empty.
+func (c *coingecko) profile(ctx context.Context, symbol string) (sdk.InstrumentProfile, error) {
+	id, err := normalize(symbol)
+	if err != nil {
+		return sdk.InstrumentProfile{}, err
+	}
+	q := url.Values{"localization": {"false"}, "tickers": {"false"}, "market_data": {"true"}, "community_data": {"false"}, "developer_data": {"false"}, "sparkline": {"false"}}
+	var parsed coinDetail
+	if err := c.get(ctx, "/api/v3/coins/"+url.PathEscape(id)+"?"+q.Encode(), &parsed); err != nil {
+		return sdk.InstrumentProfile{}, err
+	}
+	if parsed.ID == "" {
+		return sdk.InstrumentProfile{}, sdk.Errorf(sdk.CodeInvalidArgument, "CoinGecko has no coin %s", id)
+	}
+	out := sdk.InstrumentProfile{
+		Symbol: id, Kind: sdk.ProfileCrypto, Name: parsed.Name,
+		// CoinGecko writes descriptions with HTML links; the profile is plain text.
+		Description: strings.TrimSpace(html.UnescapeString(htmlTag.ReplaceAllString(parsed.Description.EN, ""))),
+		SourceURL:   "https://www.coingecko.com/en/coins/" + url.PathEscape(parsed.ID),
+		Provider:    "COINGECKO",
+	}
+	for _, home := range parsed.Links.Homepage {
+		if home = strings.TrimSpace(home); strings.HasPrefix(home, "https://") || strings.HasPrefix(home, "http://") {
+			out.Website = home
+			break
+		}
+	}
+	if t, err := time.Parse(time.RFC3339, parsed.LastUpdated); err == nil {
+		out.AsOf = t.UTC().Format(time.RFC3339)
+	}
+	crypto := sdk.CryptoProfile{CirculatingSupply: positive(parsed.MarketData.CirculatingSupply), MaxSupply: positive(parsed.MarketData.MaxSupply)}
+	if parsed.AssetPlatform != nil {
+		crypto.Network = *parsed.AssetPlatform
+	}
+	if parsed.GenesisDate != nil {
+		if _, err := time.Parse("2006-01-02", *parsed.GenesisDate); err == nil {
+			crypto.GenesisDate = *parsed.GenesisDate
+		}
+	}
+	for _, cat := range parsed.Categories {
+		if cat = strings.TrimSpace(cat); cat != "" && len(crypto.Categories) < 20 {
+			crypto.Categories = append(crypto.Categories, cat)
+		}
+	}
+	out.Crypto = &crypto
+	return out, nil
+}
+
+// positive keeps a positive supply; CoinGecko sends null or 0 when it has none.
+func positive(v *float64) *float64 {
+	if v == nil || *v <= 0 {
+		return nil
+	}
+	return v
 }

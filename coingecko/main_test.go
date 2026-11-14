@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -93,4 +94,53 @@ func TestRateLimitIsExplained(t *testing.T) {
 
 func TestConformance(t *testing.T) {
 	plugintest.Conformance(t, newPlugin(&coingecko{http: httpx.New("test", 0), base: "https://invalid.test"}))
+}
+
+func TestProfileStatesWhatCoinGeckoSays(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/coins/bitcoin":
+			if r.URL.Query().Get("tickers") != "false" || r.URL.Query().Get("market_data") != "true" {
+				t.Errorf("profile query: %s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`{"id":"bitcoin","symbol":"btc","name":"Bitcoin","asset_platform_id":null,"categories":["Cryptocurrency","Layer 1 (L1)",""],
+				"description":{"en":"Bitcoin is the first <a href=\"https://www.coingecko.com/en?category=cryptocurrency\">cryptocurrency</a> &amp; more."},
+				"links":{"homepage":["http://www.bitcoin.org","",""]},"genesis_date":"2009-01-03",
+				"market_data":{"circulating_supply":19950000,"max_supply":21000000},"last_updated":"2026-11-14T12:00:05.123Z"}`))
+		case "/api/v3/coins/usd-coin":
+			_, _ = w.Write([]byte(`{"id":"usd-coin","name":"USDC","asset_platform_id":"ethereum","categories":[],"description":{"en":""},"links":{"homepage":[]},"genesis_date":null,"market_data":{"circulating_supply":0,"max_supply":null},"last_updated":"bad"}`))
+		default:
+			http.Error(w, "not found", 404)
+		}
+	}))
+	defer srv.Close()
+	p := newPlugin(&coingecko{http: httpx.New("test", 0), base: srv.URL})
+
+	got, err := p.Profile(context.Background(), sdk.ProfileParams{Symbol: "Bitcoin"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Symbol != "bitcoin" || got.Kind != sdk.ProfileCrypto || got.Name != "Bitcoin" || got.Website != "http://www.bitcoin.org" ||
+		got.Description != "Bitcoin is the first cryptocurrency & more." || got.AsOf != "2026-11-14T12:00:05Z" ||
+		got.SourceURL != "https://www.coingecko.com/en/coins/bitcoin" {
+		t.Fatalf("profile: %+v", got)
+	}
+	c := got.Crypto
+	if c == nil || c.Network != "" || len(c.Categories) != 2 || *c.CirculatingSupply != 19950000 || *c.MaxSupply != 21000000 || c.GenesisDate != "2009-01-03" {
+		t.Fatalf("crypto part (a native coin has no platform): %+v", c)
+	}
+
+	token, err := p.Profile(context.Background(), sdk.ProfileParams{Symbol: "usd-coin"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tc := token.Crypto; tc.Network != "ethereum" || tc.CirculatingSupply != nil || tc.MaxSupply != nil || tc.GenesisDate != "" || token.AsOf != "" || token.Website != "" {
+		t.Fatalf("unknown values stay empty: %+v %+v", token, tc)
+	}
+
+	_, err = p.Profile(context.Background(), sdk.ProfileParams{Symbol: "missing"})
+	var coded *sdk.ResponseError
+	if !errors.As(err, &coded) || coded.Code != sdk.CodeInvalidArgument {
+		t.Fatalf("an unknown coin is invalid_argument, got %v", err)
+	}
 }

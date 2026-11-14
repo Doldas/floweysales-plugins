@@ -138,3 +138,39 @@ func TestEventsSkipDividendsTheKeyCannotRead(t *testing.T) {
 		t.Fatal("when both fail the error is reported")
 	}
 }
+
+func TestProfileStatesOnlyWhatProfile2Says(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/stock/profile2" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("symbol") == "NOPE" {
+			_, _ = w.Write([]byte(`{}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"country":"US","currency":"USD","exchange":"NASDAQ NMS - GLOBAL MARKET","ipo":"1999-01-22","marketCapitalization":4250000.5,"name":"NVIDIA Corp","phone":"14084861000","shareOutstanding":24300,"ticker":"NVDA","weburl":"https://www.nvidia.com/","logo":"https://static.finnhub.io/logo/x.png","finnhubIndustry":"Semiconductors"}`))
+	}))
+	defer srv.Close()
+	p := newPlugin(&finnhub{http: httpx.New("test", 0), base: srv.URL, key: "k"})
+
+	got, err := p.Profile(context.Background(), sdk.ProfileParams{Symbol: "nvda"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Symbol != "NVDA" || got.Kind != sdk.ProfileCompany || got.Name != "NVIDIA Corp" || got.Country != "US" || got.Currency != "USD" ||
+		got.Industry != "Semiconductors" || got.Sector != "" || got.Website != "https://www.nvidia.com/" {
+		t.Fatalf("profile: %+v", got)
+	}
+	if got.ISIN != "" || got.MIC != "" || got.Description != "" || got.AsOf != "" {
+		t.Fatalf("profile2 has no ISIN, MIC, description or as-of time; nothing may be filled in: %+v", got)
+	}
+	if c := got.Company; c == nil || *c.MarketCap != 4250000500000 || *c.SharesOutstanding != 24300000000 || c.IPODate != "1999-01-22" || c.Employees != nil {
+		t.Fatalf("company part, in full units: %+v", got.Company)
+	}
+
+	_, err = p.Profile(context.Background(), sdk.ProfileParams{Symbol: "NOPE"})
+	var coded *sdk.ResponseError
+	if !errors.As(err, &coded) || coded.Code != sdk.CodeInvalidArgument {
+		t.Fatalf("an unknown symbol is invalid_argument, got %v", err)
+	}
+}

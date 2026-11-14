@@ -58,6 +58,9 @@ func newPlugin(f *finnhub) sdk.Plugin {
 		},
 		News:   f.news,
 		Events: f.events,
+		Profile: func(ctx context.Context, p sdk.ProfileParams) (sdk.InstrumentProfile, error) {
+			return f.profile(ctx, p.Symbol)
+		},
 	}
 }
 
@@ -417,4 +420,58 @@ func (f *finnhub) events(ctx context.Context, p sdk.EventsParams) ([]sdk.Corpora
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Date < out[j].Date })
 	return out, nil
+}
+
+// profile2 is Finnhub's /stock/profile2 answer. Market capitalization and
+// shares outstanding are in millions.
+type profile2 struct {
+	Country           string   `json:"country"`
+	Currency          string   `json:"currency"`
+	Exchange          string   `json:"exchange"`
+	IPO               string   `json:"ipo"`
+	MarketCap         *float64 `json:"marketCapitalization"`
+	Name              string   `json:"name"`
+	SharesOutstanding *float64 `json:"shareOutstanding"`
+	Ticker            string   `json:"ticker"`
+	WebURL            string   `json:"weburl"`
+	Industry          string   `json:"finnhubIndustry"`
+}
+
+// profile states what /stock/profile2 says about a company, and nothing
+// else: it has no ISIN, MIC, description or employee count, so those stay
+// empty. Finnhub answers {} for a symbol it does not know.
+func (f *finnhub) profile(ctx context.Context, symbol string) (sdk.InstrumentProfile, error) {
+	formatted := httpx.Upper(symbol)
+	if formatted == "" {
+		return sdk.InstrumentProfile{}, sdk.Errorf(sdk.CodeInvalidArgument, "symbol is required")
+	}
+	var parsed profile2
+	if err := f.get(ctx, "/stock/profile2", url.Values{"symbol": {formatted}}, &parsed); err != nil {
+		return sdk.InstrumentProfile{}, err
+	}
+	if parsed.Name == "" && parsed.Ticker == "" {
+		return sdk.InstrumentProfile{}, sdk.Errorf(sdk.CodeInvalidArgument, "Finnhub has no profile for %s", formatted)
+	}
+	out := sdk.InstrumentProfile{
+		Symbol: formatted, Kind: sdk.ProfileCompany, Name: parsed.Name, Exchange: parsed.Exchange,
+		Currency: strings.ToUpper(parsed.Currency), Country: strings.ToUpper(parsed.Country), Website: parsed.WebURL,
+		Industry: parsed.Industry, Provider: "FINNHUB",
+	}
+	company := sdk.CompanyProfile{
+		MarketCap: millions(parsed.MarketCap), SharesOutstanding: millions(parsed.SharesOutstanding), IPODate: parsed.IPO,
+	}
+	if company.MarketCap != nil || company.SharesOutstanding != nil || company.IPODate != "" {
+		out.Company = &company
+	}
+	return out, nil
+}
+
+// millions turns a positive figure in millions into full units; a missing or
+// zero figure stays unknown.
+func millions(v *float64) *float64 {
+	if v == nil || *v <= 0 || math.IsNaN(*v) || math.IsInf(*v, 0) {
+		return nil
+	}
+	full := math.Round(*v * 1e6)
+	return &full
 }
