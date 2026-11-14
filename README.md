@@ -24,6 +24,12 @@ The `events` capability (dividends, splits, earnings dates) feeds the **Dividend
 and ECB series work in every watchlist, technical and screen node, so a flow
 can watch the 10-year yield or USD/SEK next to its stocks.
 
+## Trading host and broker extension roadmap
+
+A separate, optional **Trading Host** with independently installable **Broker Extensions** is planned. Users will be able to connect one or more brokers/accounts without coupling FloweySales to any particular broker. The initial scope is **paper/sandbox only**; live order execution remains blocked until explicit legal, broker-terms and security approval.
+
+See [TRADING_IMPLEMENTATION_PLAN.md](TRADING_IMPLEMENTATION_PLAN.md), [plugins #14](https://github.com/Doldas/floweysales-plugins/issues/14), [Avanza #15](https://github.com/Doldas/floweysales-plugins/issues/15) and [core #444](https://github.com/Doldas/floweysales/issues/444).
+
 ## Installing
 
 In FloweySales: **Settings → Plugins** (SYS_ADMIN), or on the server:
