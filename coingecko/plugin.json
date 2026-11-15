@@ -2,7 +2,7 @@
   "protocol": 1,
   "id": "coingecko",
   "name": "CoinGecko",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Crypto prices, daily and intraday history coin search and coin profiles from CoinGecko's public API. Symbols are CoinGecko coin IDs such as bitcoin or ethereum. No account access or orders.",
   "publisher": "FloweySales",
   "homepage": "https://github.com/Doldas/floweysales-plugins/tree/master/coingecko",
